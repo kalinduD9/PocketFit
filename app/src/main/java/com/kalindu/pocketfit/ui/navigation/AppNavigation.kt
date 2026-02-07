@@ -20,6 +20,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.kalindu.pocketfit.ui.screens.LoginScreen
+import com.kalindu.pocketfit.ui.screens.RegisterScreen
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -55,12 +57,38 @@ fun AppNavigation() {
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screen.Login.route) {
-                // LoginScreen will be created next
-                Text("Login Screen - Coming Soon")
+                LoginScreen(
+                    onLoginClick = {
+                        // Navigate to Home screen
+                        navController.navigate(Screen.Home.route) {
+                            // Clear the back stack so user can't go back to login
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    },
+                    onRegisterClick = {
+                        // Navigate to Register screen
+                        navController.navigate(Screen.Register.route)
+                    }
+                )
             }
 
             composable(Screen.Register.route) {
-                Text("Register Screen - Coming Soon")
+                RegisterScreen(
+                    onRegisterClick = {
+                        // Navigate to Home screen
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    },
+                    onLoginClick = {
+                        // Navigate back to Login
+                        navController.popBackStack()
+                    },
+                    onBackClick = {
+                        // Navigate back to Login
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Screen.Home.route) {
