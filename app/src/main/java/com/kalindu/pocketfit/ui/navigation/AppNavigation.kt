@@ -22,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kalindu.pocketfit.ui.screens.LoginScreen
 import com.kalindu.pocketfit.ui.screens.RegisterScreen
+import com.kalindu.pocketfit.ui.screens.HomeScreen
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -92,7 +93,7 @@ fun AppNavigation() {
             }
 
             composable(Screen.Home.route) {
-                Text("Home Screen - Coming Soon")
+                HomeScreen()
             }
 
             composable(Screen.Activity.route) {
