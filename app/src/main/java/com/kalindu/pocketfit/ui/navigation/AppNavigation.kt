@@ -20,6 +20,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.kalindu.pocketfit.ui.screens.ActivityDetailScreen
+import com.kalindu.pocketfit.ui.screens.ActivityScreen
 import com.kalindu.pocketfit.ui.screens.LoginScreen
 import com.kalindu.pocketfit.ui.screens.RegisterScreen
 import com.kalindu.pocketfit.ui.screens.HomeScreen
@@ -97,7 +99,12 @@ fun AppNavigation() {
             }
 
             composable(Screen.Activity.route) {
-                Text("Activity Screen - Coming Soon")
+                ActivityScreen(
+                    onActivityClick = { activityId ->
+                        // Navigate to Activity Detail
+                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
+                    }
+                )
             }
 
             composable(Screen.History.route) {
@@ -113,7 +120,12 @@ fun AppNavigation() {
                 arguments = listOf(navArgument("activityId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val activityId = backStackEntry.arguments?.getInt("activityId") ?: 0
-                Text("Activity Detail Screen - Activity ID: $activityId")
+                ActivityDetailScreen(
+                    activityId = activityId,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     }
