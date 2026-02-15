@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kalindu.pocketfit.utils.SampleData
@@ -82,7 +83,8 @@ fun HomeScreen() {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    textAlign = TextAlign.Center,
                 )
             }
 
@@ -114,7 +116,7 @@ fun HomeScreen() {
                             modifier = Modifier.fillMaxSize(),
                             color = MaterialTheme.colorScheme.primary,
                             strokeWidth = 12.dp,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                             strokeCap = StrokeCap.Round
                         )
 
@@ -188,7 +190,7 @@ fun HomeScreen() {
                             .fillMaxWidth()
                             .height(8.dp),
                         color = MaterialTheme.colorScheme.tertiary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f),
                         strokeCap = StrokeCap.Round
                     )
 

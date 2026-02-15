@@ -22,9 +22,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kalindu.pocketfit.ui.screens.ActivityDetailScreen
 import com.kalindu.pocketfit.ui.screens.ActivityScreen
+import com.kalindu.pocketfit.ui.screens.HistoryScreen
 import com.kalindu.pocketfit.ui.screens.LoginScreen
 import com.kalindu.pocketfit.ui.screens.RegisterScreen
 import com.kalindu.pocketfit.ui.screens.HomeScreen
+import com.kalindu.pocketfit.ui.screens.ProfileScreen
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -108,11 +110,11 @@ fun AppNavigation() {
             }
 
             composable(Screen.History.route) {
-                Text("History Screen - Coming Soon")
+                HistoryScreen()
             }
 
             composable(Screen.Profile.route) {
-                Text("Profile Screen - Coming Soon")
+                ProfileScreen()
             }
 
             composable(
