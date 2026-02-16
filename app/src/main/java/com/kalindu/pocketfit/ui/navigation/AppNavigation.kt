@@ -40,6 +40,9 @@ import com.kalindu.pocketfit.ui.screens.HomeScreen
 import com.kalindu.pocketfit.ui.screens.LoginScreen
 import com.kalindu.pocketfit.ui.screens.ProfileScreen
 import com.kalindu.pocketfit.ui.screens.RegisterScreen
+import android.content.res.Configuration
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -62,12 +65,26 @@ val bottomNavItems = listOf(
     Screen.Profile
 )
 
+
+// ... (existing code)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    // Determine orientation
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Only scroll in landscape
+    val scrollBehavior = if (isLandscape) {
+        TopAppBarDefaults.enterAlwaysScrollBehavior()
+    } else {
+        TopAppBarDefaults.pinnedScrollBehavior()
+    }
 
     // Determine which screens show the bottom bar
     val showBottomBar = currentRoute in bottomNavItems.map { it.route }
@@ -91,6 +108,7 @@ fun AppNavigation() {
     val showBackArrow = currentRoute == Screen.ActivityDetail.route
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             if (showTopBar) {
                 TopAppBar(
@@ -100,6 +118,7 @@ fun AppNavigation() {
                             fontWeight = FontWeight.Bold
                         )
                     },
+                    scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         if (showBackArrow) {
                             IconButton(onClick = { navController.popBackStack() }) {
@@ -114,7 +133,8 @@ fun AppNavigation() {
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,
                         navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        scrolledContainerColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
