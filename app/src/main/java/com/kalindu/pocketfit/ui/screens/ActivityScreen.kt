@@ -2,6 +2,7 @@ package com.kalindu.pocketfit.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,21 +15,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DirectionsBike
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,43 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kalindu.pocketfit.utils.SampleData
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityScreen(
     onActivityClick: (Int) -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Activity",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* Add new activity */ },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "New Activity"
-                )
-            }
-        }
-    ) { paddingValues ->
+    // Main content
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -210,10 +179,10 @@ fun ActivityScreen(
                             ) {
                                 Icon(
                                     imageVector = when (activity.type.lowercase()) {
-                                        "walking" -> Icons.Default.DirectionsWalk
-                                        "running" -> Icons.Default.DirectionsRun
-                                        "cycling" -> Icons.Default.DirectionsBike
-                                        else -> Icons.Default.DirectionsRun
+                                        "walking" -> Icons.AutoMirrored.Filled.DirectionsWalk
+                                        "running" -> Icons.AutoMirrored.Filled.DirectionsRun
+                                        "cycling" -> Icons.AutoMirrored.Filled.DirectionsBike
+                                        else -> Icons.AutoMirrored.Filled.DirectionsRun
                                     },
                                     contentDescription = activity.type,
                                     tint = MaterialTheme.colorScheme.primary,
@@ -263,6 +232,21 @@ fun ActivityScreen(
             item {
                 Spacer(modifier = Modifier.height(80.dp))
             }
+        }
+
+        // FAB
+        FloatingActionButton(
+            onClick = { /* Add new activity */ },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "New Activity"
+            )
         }
     }
 }

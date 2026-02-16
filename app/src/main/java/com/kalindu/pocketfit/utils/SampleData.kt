@@ -5,12 +5,12 @@ import com.kalindu.pocketfit.data.model.User
 
 object SampleData {
     val sampleUser = User(
-        name = "John Doe",
-        email = "john.doe@example.com",
+        name = "Kalindu Dulshan",
+        email = "kalindu@example.com",
         weight = "70",
         height = "175",
         goal = "Maintenance",
-        dateOfBirth = "1995-01-01"
+        age = 21
     )
 
     val sampleActivities = listOf(
@@ -22,7 +22,7 @@ object SampleData {
             calories = 260,
             distance = "4.2 km",
             pace = "7:30 /km",
-            date = "2025-01-15",
+            date = "January 15, 2025",
             time = "08:30 AM"
         ),
         Activity(
@@ -33,7 +33,7 @@ object SampleData {
             calories = 380,
             distance = "5.5 km",
             pace = "6:22 /km",
-            date = "2025-01-15",
+            date = "January 15, 2025",
             time = "06:00 AM"
         ),
         Activity(
@@ -44,7 +44,7 @@ object SampleData {
             calories = 420,
             distance = "12.0 km",
             pace = "3:45 /km",
-            date = "2025-01-14",
+            date = "January 14, 2025",
             time = "07:00 PM"
         ),
         Activity(
@@ -55,7 +55,7 @@ object SampleData {
             calories = 150,
             distance = "2.5 km",
             pace = "8:00 /km",
-            date = "2025-01-14",
+            date = "January 14, 2025",
             time = "12:00 PM"
         ),
         Activity(
@@ -66,7 +66,7 @@ object SampleData {
             calories = 450,
             distance = "6.2 km",
             pace = "6:27 /km",
-            date = "2025-01-13",
+            date = "January 13, 2025",
             time = "06:30 AM"
         )
     )

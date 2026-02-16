@@ -1,5 +1,4 @@
 package com.kalindu.pocketfit.data.model
-import androidx.compose.ui.graphics.vector.ImageVector
 
 data class Activity(
     val id: Int,

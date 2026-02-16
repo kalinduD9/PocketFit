@@ -58,7 +58,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Logo/Title
+            // App Title
             Text(
                 text = "PocketFit",
                 style = MaterialTheme.typography.headlineLarge,
