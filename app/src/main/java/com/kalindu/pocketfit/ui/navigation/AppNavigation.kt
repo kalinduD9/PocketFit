@@ -62,11 +62,10 @@ val bottomNavItems = listOf(
     Screen.Home,
     Screen.Activity,
     Screen.History,
-    Screen.Profile
+    Screen.Profile,
 )
 
 
-// ... (existing code)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,10 +88,9 @@ fun AppNavigation() {
     // Determine which screens show the bottom bar
     val showBottomBar = currentRoute in bottomNavItems.map { it.route }
 
-    // Show the shared top bar for all screens except login and register
-    val showTopBar = currentRoute != null
-            && currentRoute != Screen.Login.route
-            && currentRoute != Screen.Register.route
+    // Show the shared top bar for all screens except login
+    val showTopBar = (currentRoute != null
+            && currentRoute != Screen.Login.route)
 
     // Resolve the title for the top bar based on current route
     val topBarTitle = when (currentRoute) {
@@ -101,11 +99,12 @@ fun AppNavigation() {
         Screen.History.route -> Screen.History.title
         Screen.Profile.route -> Screen.Profile.title
         Screen.ActivityDetail.route -> Screen.ActivityDetail.title
+        Screen.Register.route -> "Create Account"
         else -> ""
     }
 
-    // Show a back arrow on detail screens
-    val showBackArrow = currentRoute == Screen.ActivityDetail.route
+    // Show a back arrow on detail and register screens
+    val showBackArrow = currentRoute == Screen.ActivityDetail.route || currentRoute == Screen.Register.route
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -184,11 +183,10 @@ fun AppNavigation() {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
-                    },
-                    onRegisterClick = {
-                        navController.navigate(Screen.Register.route)
                     }
-                )
+                ) {
+                    navController.navigate(Screen.Register.route)
+                }
             }
 
             // Register route
@@ -198,14 +196,10 @@ fun AppNavigation() {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
-                    },
-                    onLoginClick = {
-                        navController.popBackStack()
-                    },
-                    onBackClick = {
-                        navController.popBackStack()
                     }
-                )
+                ) {
+                    navController.popBackStack()
+                }
             }
 
             // Home route
@@ -229,7 +223,13 @@ fun AppNavigation() {
 
             // Profile route
             composable(Screen.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(
+                    onLogoutClick = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
             }
 
             // Activity detail route

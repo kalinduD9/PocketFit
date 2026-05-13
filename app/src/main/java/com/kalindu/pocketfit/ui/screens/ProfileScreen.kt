@@ -17,8 +17,19 @@ import androidx.compose.ui.unit.sp
 import com.kalindu.pocketfit.utils.SampleData
 
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(
+    onLogoutClick: () -> Unit = {}
+) {
     val user = SampleData.sampleUser
+
+    var isEditing by remember { mutableStateOf(false) }
+    
+    var name by remember { mutableStateOf(user.name) }
+    var email by remember { mutableStateOf(user.email) }
+    var weight by remember { mutableStateOf(user.weight) }
+    var height by remember { mutableStateOf(user.height) }
+    var age by remember { mutableStateOf(user.age.toString()) }
+    var goal by remember { mutableStateOf(user.goal) }
 
     // Settings toggles
     var notificationsEnabled by remember { mutableStateOf(true) }
@@ -85,14 +96,14 @@ fun ProfileScreen() {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = user.name,
+                        text = name,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
                     Text(
-                        text = user.email,
+                        text = email,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -120,16 +131,16 @@ fun ProfileScreen() {
                     )
 
                     FilledTonalButton(
-                        onClick = { /* Edit profile*/ },
+                        onClick = { isEditing = !isEditing },
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit",
+                            imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
+                            contentDescription = if (isEditing) "Save" else "Edit",
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Edit", fontSize = 14.sp)
+                        Text(if (isEditing) "Save" else "Edit", fontSize = 14.sp)
                     }
                 }
 
@@ -139,7 +150,9 @@ fun ProfileScreen() {
                 ProfileDetailRow(
                     icon = Icons.Default.Person,
                     label = "Full Name",
-                    value = user.name
+                    value = name,
+                    isEditing = isEditing,
+                    onValueChange = { name = it }
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -147,7 +160,9 @@ fun ProfileScreen() {
                 ProfileDetailRow(
                     icon = Icons.Default.Email,
                     label = "Email",
-                    value = user.email
+                    value = email,
+                    isEditing = isEditing,
+                    onValueChange = { email = it }
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -155,7 +170,10 @@ fun ProfileScreen() {
                 ProfileDetailRow(
                     icon = Icons.Default.FitnessCenter,
                     label = "Weight",
-                    value = "${user.weight} kg"
+                    value = weight,
+                    isEditing = isEditing,
+                    onValueChange = { weight = it },
+                    suffix = "kg"
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -163,7 +181,10 @@ fun ProfileScreen() {
                 ProfileDetailRow(
                     icon = Icons.Default.Height,
                     label = "Height",
-                    value = "${user.height} cm"
+                    value = height,
+                    isEditing = isEditing,
+                    onValueChange = { height = it },
+                    suffix = "cm"
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -171,7 +192,9 @@ fun ProfileScreen() {
                 ProfileDetailRow(
                     icon = Icons.Default.CalendarToday,
                     label = "Age",
-                    value = user.age.toString()
+                    value = age,
+                    isEditing = isEditing,
+                    onValueChange = { age = it }
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -179,7 +202,9 @@ fun ProfileScreen() {
                 ProfileDetailRow(
                     icon = Icons.Default.Flag,
                     label = "Fitness Goal",
-                    value = user.goal
+                    value = goal,
+                    isEditing = isEditing,
+                    onValueChange = { goal = it }
                 )
             }
         }
@@ -360,7 +385,7 @@ fun ProfileScreen() {
 
         // Logout Button
         OutlinedButton(
-            onClick = { /* Logout*/ },
+            onClick = onLogoutClick,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.error
@@ -384,7 +409,10 @@ fun ProfileScreen() {
 private fun ProfileDetailRow(
     icon: ImageVector,
     label: String,
-    value: String
+    value: String,
+    isEditing: Boolean = false,
+    onValueChange: (String) -> Unit = {},
+    suffix: String = ""
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -397,17 +425,29 @@ private fun ProfileDetailRow(
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
+            if (isEditing) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    suffix = { if (suffix.isNotEmpty()) Text(suffix) }
+                )
+            } else {
+                val displayValue = if (suffix.isNotEmpty() && value.isNotEmpty()) "$value $suffix" else value
+                Text(
+                    text = displayValue,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
