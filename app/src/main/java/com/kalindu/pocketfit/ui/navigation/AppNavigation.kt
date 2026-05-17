@@ -43,6 +43,8 @@ import com.kalindu.pocketfit.ui.screens.RegisterScreen
 import android.content.res.Configuration
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -71,8 +73,16 @@ val bottomNavItems = listOf(
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val authViewModel: AuthViewModel = viewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    // Determine start destination based on authentication status
+    val startDestination = if (authViewModel.isUserLoggedIn()) {
+        Screen.Home.route
+    } else {
+        Screen.Login.route
+    }
 
     // Determine orientation
     val configuration = LocalConfiguration.current
@@ -148,7 +158,7 @@ fun AppNavigation() {
 
         NavHost(
             navController = navController,
-            startDestination = Screen.Login.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(paddingValues),
             // Animated transitions for navigation
             enterTransition = {
@@ -179,32 +189,36 @@ fun AppNavigation() {
             // Navigation routes
             composable(Screen.Login.route) {
                 LoginScreen(
-                    onLoginClick = {
+                    authViewModel = authViewModel,
+                    onLoginSuccess = {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
+                    },
+                    onRegisterClick = {
+                        navController.navigate(Screen.Register.route)
                     }
-                ) {
-                    navController.navigate(Screen.Register.route)
-                }
+                )
             }
 
             // Register route
             composable(Screen.Register.route) {
                 RegisterScreen(
-                    onRegisterClick = {
+                    authViewModel = authViewModel,
+                    onRegisterSuccess = {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
+                    },
+                    onLoginClick = {
+                        navController.popBackStack()
                     }
-                ) {
-                    navController.popBackStack()
-                }
+                )
             }
 
             // Home route
             composable(Screen.Home.route) {
-                HomeScreen()
+                HomeScreen(authViewModel = authViewModel)
             }
 
             // Activity route
@@ -224,7 +238,9 @@ fun AppNavigation() {
             // Profile route
             composable(Screen.Profile.route) {
                 ProfileScreen(
+                    authViewModel = authViewModel,
                     onLogoutClick = {
+                        authViewModel.logout()
                         navController.navigate(Screen.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }

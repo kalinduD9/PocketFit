@@ -28,10 +28,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
 import com.kalindu.pocketfit.utils.SampleData
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    authViewModel: AuthViewModel
+) {
     val scrollState = rememberScrollState()
     val stepsProgress = SampleData.todaySteps / 10000f
     val caloriesProgress = SampleData.todayCalories / 1000f
@@ -52,7 +55,7 @@ fun HomeScreen() {
             )
         ) {
             Text(
-                text = "Welcome Back, User!",
+                text = "Welcome Back, ${authViewModel.currentUserName}!",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,

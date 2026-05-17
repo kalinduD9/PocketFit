@@ -10,26 +10,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kalindu.pocketfit.utils.SampleData
+import com.kalindu.pocketfit.ui.viewmodel.AuthState
+import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
 
 @Composable
 fun ProfileScreen(
+    authViewModel: AuthViewModel,
     onLogoutClick: () -> Unit = {}
 ) {
-    val user = SampleData.sampleUser
-
     var isEditing by remember { mutableStateOf(false) }
-    
-    var name by remember { mutableStateOf(user.name) }
-    var email by remember { mutableStateOf(user.email) }
-    var weight by remember { mutableStateOf(user.weight) }
-    var height by remember { mutableStateOf(user.height) }
-    var age by remember { mutableStateOf(user.age.toString()) }
-    var goal by remember { mutableStateOf(user.goal) }
+    val authState by authViewModel.authState
+
+    // Initialize name and email from the currently logged-in Firebase user.
+    // Weight, height, age, and goal are local-only until a database is added.
+    var name by remember { mutableStateOf(authViewModel.currentUserName) }
+    var email by remember { mutableStateOf(authViewModel.currentUserEmail) }
+    var weight by remember { mutableStateOf("") }
+    var height by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var goal by remember { mutableStateOf("") }
 
     // Settings toggles
     var notificationsEnabled by remember { mutableStateOf(true) }
@@ -146,6 +150,24 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Status Message Display (for password reset or errors)
+                if (authState is AuthState.Error || authState is AuthState.Success) {
+                    val (color, message) = when (authState) {
+                        is AuthState.Error -> MaterialTheme.colorScheme.error to (authState as AuthState.Error).message
+                        is AuthState.Success -> Color(0xFF4CAF50) to (authState as AuthState.Success).message
+                        else -> Color.Transparent to ""
+                    }
+                    Text(
+                        text = message,
+                        color = color,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        fontSize = 12.sp
+                    )
+                }
+
                 // Detail rows
                 ProfileDetailRow(
                     icon = Icons.Default.Person,
@@ -164,6 +186,21 @@ fun ProfileScreen(
                     isEditing = isEditing,
                     onValueChange = { email = it }
                 )
+
+                if (!isEditing) {
+                    TextButton(
+                        onClick = { authViewModel.resetPassword(email) },
+                        modifier = Modifier.padding(start = 40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LockReset,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Reset Password", fontSize = 14.sp)
+                    }
+                }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
