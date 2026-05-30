@@ -45,6 +45,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import com.kalindu.pocketfit.ui.viewmodel.HomeViewModel
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -74,6 +75,7 @@ val bottomNavItems = listOf(
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
+    val homeViewModel: HomeViewModel = viewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -218,7 +220,10 @@ fun AppNavigation() {
 
             // Home route
             composable(Screen.Home.route) {
-                HomeScreen(authViewModel = authViewModel)
+                HomeScreen(
+                    authViewModel = authViewModel,
+                    homeViewModel = homeViewModel
+                )
             }
 
             // Activity route

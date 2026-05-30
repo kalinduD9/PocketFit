@@ -1,7 +1,15 @@
 package com.kalindu.pocketfit.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -10,24 +18,37 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import coil.compose.rememberAsyncImagePainter
 import com.kalindu.pocketfit.ui.viewmodel.AuthState
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun ProfileScreen(
     authViewModel: AuthViewModel,
     onLogoutClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var isEditing by remember { mutableStateOf(false) }
     val authState by authViewModel.authState
 
+    // Profile Picture State
+    var capturedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var tempImageUri by remember { mutableStateOf<Uri?>(null) }
+
     // Initialize name and email from the currently logged-in Firebase user.
-    // Weight, height, age, and goal are local-only until a database is added.
     var name by remember { mutableStateOf(authViewModel.currentUserName) }
     var email by remember { mutableStateOf(authViewModel.currentUserEmail) }
     var weight by remember { mutableStateOf("") }
@@ -39,6 +60,27 @@ fun ProfileScreen(
     var notificationsEnabled by remember { mutableStateOf(true) }
     var darkModeEnabled by remember { mutableStateOf(false) }
 
+    // Camera Launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            if (success) {
+                capturedImageUri = tempImageUri
+            }
+        }
+    )
+
+    // Permission Launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val uri = createTempImageUri(context)
+            tempImageUri = uri
+            cameraLauncher.launch(uri)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,7 +88,7 @@ fun ProfileScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // User Info Card with profile picture + edit icon
+        // User Info Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -63,35 +105,56 @@ fun ProfileScreen(
                     // Profile picture with edit badge
                     Box {
                         Surface(
-                            shape = MaterialTheme.shapes.extraLarge,
+                            shape = CircleShape,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(80.dp)
+                            modifier = Modifier.size(100.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "Profile Picture",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(20.dp)
-                            )
+                            if (capturedImageUri != null) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(capturedImageUri),
+                                    contentDescription = "Profile Picture",
+                                    modifier = Modifier.clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Profile Picture",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.padding(25.dp)
+                                )
+                            }
                         }
 
-                        // Camera edit badge on profile picture
+                        // Camera edit badge
                         Surface(
-                            shape = MaterialTheme.shapes.small,
+                            shape = CircleShape,
                             color = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(32.dp)
                                 .align(Alignment.BottomEnd)
                         ) {
                             IconButton(
-                                onClick = { /* Change photo - no functionality needed */ },
-                                modifier = Modifier.size(28.dp)
+                                onClick = {
+                                    val permissionCheckResult = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.CAMERA
+                                    )
+                                    if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
+                                        val uri = createTempImageUri(context)
+                                        tempImageUri = uri
+                                        cameraLauncher.launch(uri)
+                                    } else {
+                                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.CameraAlt,
                                     contentDescription = "Change Profile Picture",
                                     tint = MaterialTheme.colorScheme.onSecondary,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -122,7 +185,7 @@ fun ProfileScreen(
                     .fillMaxWidth()
                     .padding(20.dp)
             ) {
-                // Header row with title and edit button
+                // Header row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -150,7 +213,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Status Message Display (for password reset or errors)
+                // Status Message
                 if (authState is AuthState.Error || authState is AuthState.Success) {
                     val (color, message) = when (authState) {
                         is AuthState.Error -> MaterialTheme.colorScheme.error to (authState as AuthState.Error).message
@@ -168,7 +231,6 @@ fun ProfileScreen(
                     )
                 }
 
-                // Detail rows
                 ProfileDetailRow(
                     icon = Icons.Default.Person,
                     label = "Full Name",
@@ -264,68 +326,9 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    // Total Workouts
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "💪",
-                            fontSize = 28.sp
-                        )
-                        Text(
-                            text = "48",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Workouts",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Total Distance
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "🏃",
-                            fontSize = 28.sp
-                        )
-                        Text(
-                            text = "124 km",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Distance",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Total Calories
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "🔥",
-                            fontSize = 28.sp
-                        )
-                        Text(
-                            text = "12,450",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Calories",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    StatBox(emoji = "💪", value = "48", label = "Workouts")
+                    StatBox(emoji = "🏃", value = "124 km", label = "Distance")
+                    StatBox(emoji = "🔥", value = "12,450", label = "Calories")
                 }
             }
         }
@@ -344,79 +347,23 @@ fun ProfileScreen(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                // Notifications Toggle
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Notifications",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Receive workout reminders",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = notificationsEnabled,
-                        onCheckedChange = { notificationsEnabled = it }
-                    )
-                }
+                SettingToggle(
+                    icon = Icons.Default.Notifications,
+                    title = "Notifications",
+                    subtitle = "Receive workout reminders",
+                    checked = notificationsEnabled,
+                    onCheckedChange = { notificationsEnabled = it }
+                )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                // Dark Mode Toggle
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DarkMode,
-                            contentDescription = "Dark Mode",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Dark Mode",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Toggle dark theme",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = darkModeEnabled,
-                        onCheckedChange = { darkModeEnabled = it }
-                    )
-                }
+                SettingToggle(
+                    icon = Icons.Default.DarkMode,
+                    title = "Dark Mode",
+                    subtitle = "Toggle dark theme",
+                    checked = darkModeEnabled,
+                    onCheckedChange = { darkModeEnabled = it }
+                )
             }
         }
 
@@ -437,9 +384,22 @@ fun ProfileScreen(
             Text("Logout", fontSize = 16.sp)
         }
 
-        // Bottom spacing
         Spacer(modifier = Modifier.height(16.dp))
     }
+}
+
+private fun createTempImageUri(context: Context): Uri {
+    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+    val imageFileName = "JPEG_" + timeStamp + "_"
+    val storageDir = File(context.cacheDir, "images").apply {
+        if (!exists()) mkdirs()
+    }
+    val file = File.createTempFile(imageFileName, ".jpg", storageDir)
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        file
+    )
 }
 
 @Composable
@@ -486,5 +446,48 @@ private fun ProfileDetailRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun StatBox(emoji: String, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = emoji, fontSize = 28.sp)
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun SettingToggle(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = icon, contentDescription = title, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

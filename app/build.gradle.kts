@@ -69,5 +69,13 @@ dependencies {
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp.logging)
+
+    // Coil
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
     apply(plugin = "com.google.gms.google-services")
 }

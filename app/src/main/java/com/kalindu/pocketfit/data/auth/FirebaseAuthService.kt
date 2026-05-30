@@ -4,20 +4,16 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.tasks.await
 
-/**
- * Service that handles all Firebase Authentication operations.
- * This acts as a wrapper around Firebase Auth to make it easier to use in the app.
- */
+// Service that handles all Firebase Authentication operations.
+// This acts as a wrapper around Firebase Auth to make it easier to use in the app.
 class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInstance()) {
 
-    /**
-     * Register a new user with email and password
-     *
-     * @param email User's email
-     * @param password User's password
-     * @param name User's full name
-     * @return AuthResult containing success status and optional error message
-     */
+    // Register a new user with email and password
+    //
+    // @param email User's email
+    // @param password User's password
+    // @param name User's full name
+    // @return AuthResult containing success status and optional error message
     suspend fun registerWithEmail(
         email: String,
         password: String,
@@ -50,13 +46,11 @@ class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInsta
         }
     }
 
-    /**
-     * Login user with email and password
-     *
-     * @param email User's email
-     * @param password User's password
-     * @return AuthResult containing success status and optional error message
-     */
+    // Login user with email and password
+    //
+    // @param email User's email
+    // @param password User's password
+    // @return AuthResult containing success status and optional error message
     suspend fun loginWithEmail(
         email: String,
         password: String
@@ -78,33 +72,25 @@ class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInsta
         }
     }
 
-    /**
-     * Sign out the current user
-     */
+    // Sign out the current user
     fun signOut() {
         auth.signOut()
     }
 
-    /**
-     * Get the currently logged-in user
-     *
-     * @return Current user or null if no user is logged in
-     */
+    // Get the currently logged-in user
+    //
+    // @return Current user or null if no user is logged in
     fun getCurrentUser() = auth.currentUser
 
-    /**
-     * Check if user is logged in
-     *
-     * @return true if user is logged in, false otherwise
-     */
+    // Check if user is logged in
+    //
+    // @return true if user is logged in, false otherwise
     fun isUserLoggedIn() = auth.currentUser != null
 
-    /**
-     * Send password reset email
-     *
-     * @param email User's email
-     * @return AuthResult containing success status
-     */
+    // Send password reset email
+    //
+    // @param email User's email
+    // @return AuthResult containing success status
     suspend fun sendPasswordResetEmail(email: String): AuthResult {
         return try {
             auth.sendPasswordResetEmail(email).await()
@@ -118,9 +104,7 @@ class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInsta
     }
 }
 
-/**
- * Data class to hold authentication results
- */
+// Data class to hold authentication results
 data class AuthResult(
     val success: Boolean = false,
     val userId: String? = null,

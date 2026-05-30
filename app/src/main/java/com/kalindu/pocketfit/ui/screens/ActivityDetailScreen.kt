@@ -236,7 +236,9 @@ fun ActivityDetailScreen(
         ) {
             // Delete Button
             OutlinedButton(
-                onClick = { /* Delete activity */ },
+                onClick = {
+                    // Delete activity
+                },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
