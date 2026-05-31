@@ -1,5 +1,6 @@
 package com.kalindu.pocketfit.data.repository
 
+import com.kalindu.pocketfit.BuildConfig
 import com.kalindu.pocketfit.data.api.WeatherApiService
 import com.kalindu.pocketfit.data.model.WeatherResponse
 import okhttp3.OkHttpClient
@@ -8,7 +9,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class WeatherRepository {
-    private val apiKey = "b6e1f33bba27766da858cc632b106b1b"
+    private val apiKey = BuildConfig.OPENWEATHER_API_KEY
     private val baseUrl = "https://api.openweathermap.org/data/2.5/"
 
     private val apiService: WeatherApiService by lazy {

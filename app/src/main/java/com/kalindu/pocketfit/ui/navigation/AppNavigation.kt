@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
 import com.kalindu.pocketfit.ui.viewmodel.HomeViewModel
+import com.kalindu.pocketfit.ui.viewmodel.ActivityViewModel
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -76,6 +77,7 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val homeViewModel: HomeViewModel = viewModel()
+    val activityViewModel: ActivityViewModel = viewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -231,7 +233,8 @@ fun AppNavigation() {
                 ActivityScreen(
                     onActivityClick = { activityId ->
                         navController.navigate(Screen.ActivityDetail.createRoute(activityId))
-                    }
+                    },
+                    viewModel = activityViewModel
                 )
             }
 
@@ -260,7 +263,9 @@ fun AppNavigation() {
             ) { backStackEntry ->
                 val activityId = backStackEntry.arguments?.getInt("activityId") ?: 0
                 ActivityDetailScreen(
-                    activityId = activityId
+                    activityId = activityId,
+                    viewModel = activityViewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
         }
