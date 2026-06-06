@@ -83,14 +83,15 @@ class SessionCalculationsTest {
             id = 1,
             startTimeMillis = 1_000L,
             plannedDurationMinutes = 1,
-            steps = 250
+            steps = 250,
+            weightUsedKg = 84.0
         )
 
         val result = SessionCalculations.liveMetrics(session, 100_000L)
 
         assertEquals(60L, result.durationSeconds)
         assertEquals(250, result.steps)
-        assertEquals(10, result.calories)
+        assertEquals(12, result.calories)
     }
 
     @Test
@@ -119,12 +120,14 @@ class SessionCalculationsTest {
         id: Int,
         startTimeMillis: Long,
         plannedDurationMinutes: Int = 30,
-        steps: Int = 0
+        steps: Int = 0,
+        weightUsedKg: Double = 70.0
     ) = ActivitySession(
         id = id,
         name = "Session $id",
         plannedDurationMinutes = plannedDurationMinutes,
         startTimeMillis = startTimeMillis,
+        weightUsedKg = weightUsedKg,
         steps = steps
     )
 }

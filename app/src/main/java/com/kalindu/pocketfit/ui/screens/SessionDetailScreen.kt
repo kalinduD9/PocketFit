@@ -138,7 +138,8 @@ fun SessionDetailScreen(
         }
 
         Text(
-            "Calories are estimated from steps using a 70 kg reference weight.",
+            "Calories are estimated from steps using the saved session weight " +
+                "(${"%.1f".format(session.weightUsedKg)} kg).",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

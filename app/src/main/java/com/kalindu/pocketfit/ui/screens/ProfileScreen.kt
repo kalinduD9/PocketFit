@@ -32,8 +32,10 @@ import coil.request.ImageRequest
 import coil.compose.rememberAsyncImagePainter
 import com.kalindu.pocketfit.ui.viewmodel.AuthState
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import com.kalindu.pocketfit.ui.viewmodel.ProfileDetailsUiState
 import com.kalindu.pocketfit.ui.viewmodel.ProfilePhotoUiState
 import com.kalindu.pocketfit.ui.viewmodel.ProfileViewModel
+import com.kalindu.pocketfit.ui.viewmodel.SessionViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -42,6 +44,7 @@ import java.util.*
 fun ProfileScreen(
     authViewModel: AuthViewModel,
     profileViewModel: ProfileViewModel,
+    sessionViewModel: SessionViewModel,
     onLogoutClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -50,6 +53,9 @@ fun ProfileScreen(
     val profilePhotoUri by profileViewModel.photoUri.collectAsState()
     val photoRevision by profileViewModel.photoRevision.collectAsState()
     val photoState by profileViewModel.photoState.collectAsState()
+    val profileDetails by profileViewModel.profileDetails.collectAsState()
+    val detailsState by profileViewModel.detailsState.collectAsState()
+    val sessions by sessionViewModel.sessions.collectAsState()
     val isPhotoActionRunning = photoState is ProfilePhotoUiState.Saving
 
     // Profile Picture State
@@ -58,12 +64,21 @@ fun ProfileScreen(
     var showRemoveConfirmation by remember { mutableStateOf(false) }
 
     // Initialize name and email from the currently logged-in Firebase user.
-    var name by remember { mutableStateOf(authViewModel.currentUserName) }
-    var email by remember { mutableStateOf(authViewModel.currentUserEmail) }
+    val name = authViewModel.currentUserName
+    val email = authViewModel.currentUserEmail
     var weight by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
     var goal by remember { mutableStateOf("") }
+
+    LaunchedEffect(profileDetails, isEditing) {
+        if (!isEditing) {
+            weight = profileDetails.weightKg?.let { "%.1f".format(it) }.orEmpty()
+            height = profileDetails.heightCm?.toString().orEmpty()
+            age = profileDetails.age?.toString().orEmpty()
+            goal = profileDetails.fitnessGoal
+        }
+    }
 
     // Settings toggles
     var notificationsEnabled by remember { mutableStateOf(true) }
@@ -337,7 +352,16 @@ fun ProfileScreen(
                     )
 
                     FilledTonalButton(
-                        onClick = { isEditing = !isEditing },
+                        onClick = {
+                            if (isEditing) {
+                                if (profileViewModel.saveDetails(weight, height, age, goal)) {
+                                    isEditing = false
+                                }
+                            } else {
+                                profileViewModel.clearDetailsState()
+                                isEditing = true
+                            }
+                        },
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Icon(
@@ -370,12 +394,28 @@ fun ProfileScreen(
                     )
                 }
 
+                when (val state = detailsState) {
+                    is ProfileDetailsUiState.Error -> Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    is ProfileDetailsUiState.Success -> Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    ProfileDetailsUiState.Idle -> Unit
+                }
+
                 ProfileDetailRow(
                     icon = Icons.Default.Person,
                     label = "Full Name",
                     value = name,
-                    isEditing = isEditing,
-                    onValueChange = { name = it }
+                    isEditing = false,
+                    onValueChange = {}
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -384,8 +424,8 @@ fun ProfileScreen(
                     icon = Icons.Default.Email,
                     label = "Email",
                     value = email,
-                    isEditing = isEditing,
-                    onValueChange = { email = it }
+                    isEditing = false,
+                    onValueChange = {}
                 )
 
                 if (!isEditing) {
@@ -465,9 +505,21 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    StatBox(emoji = "💪", value = "48", label = "Workouts")
-                    StatBox(emoji = "🏃", value = "124 km", label = "Distance")
-                    StatBox(emoji = "🔥", value = "12,450", label = "Calories")
+                    StatBox(
+                        emoji = "📊",
+                        value = sessions.size.toString(),
+                        label = "Sessions"
+                    )
+                    StatBox(
+                        emoji = "🚶",
+                        value = sessions.sumOf { it.steps }.toString(),
+                        label = "Steps"
+                    )
+                    StatBox(
+                        emoji = "🔥",
+                        value = sessions.sumOf { it.calories }.toString(),
+                        label = "Calories"
+                    )
                 }
             }
         }

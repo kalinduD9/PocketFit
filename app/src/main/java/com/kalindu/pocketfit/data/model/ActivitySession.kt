@@ -23,6 +23,7 @@ data class ActivitySession(
     val plannedDurationMinutes: Int,
     val stepGoal: Int? = null,
     val calorieGoal: Int? = null,
+    val weightUsedKg: Double = 70.0,
     val startTimeMillis: Long,
     val endTimeMillis: Long? = null,
     val status: String = SessionStatus.ACTIVE,

@@ -61,7 +61,7 @@ object SessionCalculations {
         return SessionMetrics(
             durationSeconds = elapsedSeconds,
             steps = session.steps.coerceAtLeast(0),
-            calories = caloriesForSteps(session.steps)
+            calories = caloriesForSteps(session.steps, session.weightUsedKg)
         )
     }
 

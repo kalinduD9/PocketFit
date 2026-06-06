@@ -267,6 +267,7 @@ fun AppNavigation() {
                 ProfileScreen(
                     authViewModel = authViewModel,
                     profileViewModel = profileViewModel,
+                    sessionViewModel = sessionViewModel,
                     onLogoutClick = {
                         authViewModel.logout()
                         navController.navigate(Screen.Login.route) {

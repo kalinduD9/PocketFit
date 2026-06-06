@@ -8,6 +8,7 @@ import com.kalindu.pocketfit.data.model.ActivitySession
 import com.kalindu.pocketfit.data.model.SessionCompletionReason
 import com.kalindu.pocketfit.data.model.SessionStatus
 import com.kalindu.pocketfit.data.repository.SessionRepository
+import com.kalindu.pocketfit.data.repository.ProfileDetailsRepository
 import com.kalindu.pocketfit.utils.SessionCalculations
 import com.kalindu.pocketfit.utils.StepSensorManager
 import kotlinx.coroutines.delay
@@ -31,6 +32,8 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     private val repository = SessionRepository(
         AppDatabase.getDatabase(application).sessionDao()
     )
+    private val profileDetailsRepository =
+        ProfileDetailsRepository(application.applicationContext)
     private val stepSensorManager = StepSensorManager(application.applicationContext)
 
     val sessions: StateFlow<List<ActivitySession>> = repository.allSessions.stateIn(
@@ -136,6 +139,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                         plannedDurationMinutes = requireNotNull(durationMinutes),
                         stepGoal = stepGoal,
                         calorieGoal = calorieGoal,
+                        weightUsedKg = profileDetailsRepository.currentWeightKg(),
                         startTimeMillis = System.currentTimeMillis()
                     )
                 )
@@ -204,7 +208,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         val sessionSteps = (rawSteps - baseline).coerceAtLeast(0)
-        val calories = SessionCalculations.caloriesForSteps(sessionSteps)
+        val calories = SessionCalculations.caloriesForSteps(
+            sessionSteps,
+            session.weightUsedKg
+        )
         val updatedSession = session.copy(
             stepBaseline = baseline,
             steps = sessionSteps,
@@ -265,7 +272,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                         status = SessionStatus.COMPLETED,
                         completionReason = reason,
                         steps = session.steps.coerceAtLeast(0),
-                        calories = SessionCalculations.caloriesForSteps(session.steps),
+                        calories = SessionCalculations.caloriesForSteps(
+                            session.steps,
+                            session.weightUsedKg
+                        ),
                         actualDurationSeconds = durationSeconds
                     )
                 )
