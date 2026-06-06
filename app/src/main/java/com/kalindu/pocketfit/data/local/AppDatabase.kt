@@ -4,25 +4,53 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.kalindu.pocketfit.data.model.Activity
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.kalindu.pocketfit.data.model.ActivitySession
 
-@Database(entities = [Activity::class], version = 1, exportSchema = false)
+@Database(entities = [ActivitySession::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun activityDao(): ActivityDao
+    abstract fun sessionDao(): SessionDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS activities")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sessions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        plannedDurationMinutes INTEGER NOT NULL,
+                        stepGoal INTEGER,
+                        calorieGoal INTEGER,
+                        startTimeMillis INTEGER NOT NULL,
+                        endTimeMillis INTEGER,
+                        status TEXT NOT NULL,
+                        completionReason TEXT,
+                        stepBaseline INTEGER,
+                        steps INTEGER NOT NULL,
+                        calories INTEGER NOT NULL,
+                        actualDurationSeconds INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "pocketfit_database"
-                ).build()
-                INSTANCE = instance
-                instance
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }

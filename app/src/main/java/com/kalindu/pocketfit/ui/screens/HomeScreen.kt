@@ -2,7 +2,6 @@ package com.kalindu.pocketfit.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -23,9 +22,10 @@ import androidx.core.content.ContextCompat
 import com.kalindu.pocketfit.data.repository.WeatherSource
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
 import com.kalindu.pocketfit.ui.viewmodel.HomeViewModel
+import com.kalindu.pocketfit.ui.viewmodel.SessionSensorState
+import com.kalindu.pocketfit.ui.viewmodel.SessionViewModel
 import com.kalindu.pocketfit.ui.viewmodel.WeatherUiState
 import com.kalindu.pocketfit.utils.LocationHelper
-import com.kalindu.pocketfit.utils.SampleData
 import java.text.DateFormat
 import java.util.Date
 
@@ -33,11 +33,13 @@ import java.util.Date
 fun HomeScreen(
     authViewModel: AuthViewModel,
     homeViewModel: HomeViewModel,
+    sessionViewModel: SessionViewModel
 ) {
     val context = LocalContext.current
     val locationHelper = remember { LocationHelper(context) }
-    val currentSteps by homeViewModel.currentSteps
-    val isSensorAvailable by homeViewModel.isStepSensorAvailable
+    val activeSession by sessionViewModel.activeSession.collectAsState()
+    val todaySessions by sessionViewModel.todaySessions.collectAsState()
+    val sensorState by sessionViewModel.sensorState.collectAsState()
 
     // Permission Launchers
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -57,17 +59,8 @@ fun HomeScreen(
         }
     }
 
-    val activityPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            homeViewModel.startStepTracking(context)
-        }
-    }
-
-    // Initialize fetching and tracking
+    // Initialize weather fetching.
     LaunchedEffect(Unit) {
-        // Handle Weather
         val hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                           ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (hasLocation) {
@@ -81,23 +74,14 @@ fun HomeScreen(
         } else {
             locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
-
-        // Handle Steps
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
-                homeViewModel.startStepTracking(context)
-            } else {
-                activityPermissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
-            }
-        } else {
-            homeViewModel.startStepTracking(context)
-        }
     }
 
     val scrollState = rememberScrollState()
-    val stepsProgress = currentSteps / 10000f
-    val caloriesProgress = SampleData.todayCalories / 1000f
     val weatherState by homeViewModel.weatherState
+    val totalSteps = todaySessions.sumOf { it.steps }
+    val totalCalories = todaySessions.sumOf { it.calories }
+    val stepsProgress = (totalSteps / 10_000f).coerceIn(0f, 1f)
+    val caloriesProgress = (totalCalories / 1_000f).coerceIn(0f, 1f)
 
     Column(
         modifier = Modifier
@@ -133,7 +117,7 @@ fun HomeScreen(
             }
         })
 
-        // Steps Today Card
+        // Steps tracked by today's sessions.
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(20.dp),
@@ -159,7 +143,7 @@ fun HomeScreen(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = if (isSensorAvailable) currentSteps.toString() else "--",
+                            text = totalSteps.toString(),
                             style = MaterialTheme.typography.displayMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -172,18 +156,26 @@ fun HomeScreen(
                     }
                 }
 
-                if (!isSensorAvailable) {
+                if (activeSession != null &&
+                    sensorState in listOf(
+                        SessionSensorState.UNAVAILABLE,
+                        SessionSensorState.PERMISSION_DENIED
+                    )
+                ) {
                     Text(
-                        text = "Step sensor not available on this device",
+                        text = if (sensorState == SessionSensorState.PERMISSION_DENIED) {
+                            "Activity recognition permission is denied. Time will still be tracked."
+                        } else {
+                            "Step sensor is unavailable. Time will still be tracked."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
 
-                val goalSteps = 10000
                 Text(
-                    text = "Goal: $goalSteps steps",
+                    text = "Daily goal: 10,000 steps",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 16.dp)
@@ -191,7 +183,7 @@ fun HomeScreen(
             }
         }
 
-        // Calories Burned Card
+        // Estimated calories burned by today's activities.
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -199,7 +191,7 @@ fun HomeScreen(
                     Text(text = "🔥", fontSize = 32.sp)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = SampleData.todayCalories.toString(), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
+                Text(text = totalCalories.toString(), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
                     progress = { caloriesProgress },
@@ -210,19 +202,7 @@ fun HomeScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "${(caloriesProgress * 100).toInt()}% of daily goal", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
-        // Current Activity Card
-        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-            Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text(text = "Current Activity", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(bottom = 4.dp))
-                    Text(text = SampleData.currentActivity, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                }
-                Button(onClick = { }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                    Text("Finish")
-                }
+                Text(text = "Estimated from session steps using a 70 kg reference weight.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -231,9 +211,9 @@ fun HomeScreen(
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                 Text(text = "Today's Summary", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    StatItem(label = "Distance", value = "2.4 km", icon = "🏃")
-                    StatItem(label = "Active Time", value = "45 min", icon = "⏱️")
-                    StatItem(label = "Activities", value = "2", icon = "📊")
+                    StatItem(label = "Steps", value = totalSteps.toString(), icon = "🚶")
+                    StatItem(label = "Calories", value = totalCalories.toString(), icon = "🔥")
+                    StatItem(label = "Sessions", value = todaySessions.size.toString(), icon = "📊")
                 }
             }
         }

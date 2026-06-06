@@ -1,11 +1,13 @@
 package com.kalindu.pocketfit.ui.navigation
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -20,6 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -33,39 +37,43 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.kalindu.pocketfit.ui.screens.ActivityDetailScreen
-import com.kalindu.pocketfit.ui.screens.ActivityScreen
 import com.kalindu.pocketfit.ui.screens.HistoryScreen
 import com.kalindu.pocketfit.ui.screens.HomeScreen
 import com.kalindu.pocketfit.ui.screens.LoginScreen
 import com.kalindu.pocketfit.ui.screens.ProfileScreen
 import com.kalindu.pocketfit.ui.screens.RegisterScreen
+import com.kalindu.pocketfit.ui.screens.SessionDetailScreen
+import com.kalindu.pocketfit.ui.screens.SessionScreen
 import android.content.res.Configuration
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
 import com.kalindu.pocketfit.ui.viewmodel.HomeViewModel
-import com.kalindu.pocketfit.ui.viewmodel.ActivityViewModel
 import com.kalindu.pocketfit.ui.viewmodel.ProfileViewModel
+import com.kalindu.pocketfit.ui.viewmodel.SessionViewModel
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
     object Login : Screen("login", "Login")
     object Register : Screen("register", "Register")
     object Home : Screen("home", "Home", Icons.Default.Home)
-    object Activity : Screen("activity", "Activity", Icons.AutoMirrored.Filled.DirectionsRun)
+    object Sessions : Screen("sessions", "Sessions", Icons.Default.Timer)
     object History : Screen("history", "History", Icons.Default.History)
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
-    object ActivityDetail : Screen("activity_detail/{activityId}", "Activity Details") {
-        fun createRoute(activityId: Int) = "activity_detail/$activityId"
+    object SessionDetail : Screen("session_detail/{sessionId}", "Session Details") {
+        fun createRoute(sessionId: Int) = "session_detail/$sessionId"
     }
 }
 
 // List of bottom navigation items
 val bottomNavItems = listOf(
     Screen.Home,
-    Screen.Activity,
+    Screen.Sessions,
     Screen.History,
     Screen.Profile,
 )
@@ -78,7 +86,7 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val homeViewModel: HomeViewModel = viewModel()
-    val activityViewModel: ActivityViewModel = viewModel()
+    val sessionViewModel: SessionViewModel = viewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -110,16 +118,19 @@ fun AppNavigation() {
     // Resolve the title for the top bar based on current route
     val topBarTitle = when (currentRoute) {
         Screen.Home.route -> "PocketFit"
-        Screen.Activity.route -> Screen.Activity.title
+        Screen.Sessions.route -> Screen.Sessions.title
         Screen.History.route -> Screen.History.title
         Screen.Profile.route -> Screen.Profile.title
-        Screen.ActivityDetail.route -> Screen.ActivityDetail.title
+        Screen.SessionDetail.route -> Screen.SessionDetail.title
         Screen.Register.route -> "Create Account"
         else -> ""
     }
 
     // Show a back arrow on detail and register screens
-    val showBackArrow = currentRoute == Screen.ActivityDetail.route || currentRoute == Screen.Register.route
+    val showBackArrow =
+        currentRoute == Screen.SessionDetail.route || currentRoute == Screen.Register.route
+
+    SessionTrackingPermissionEffect(sessionViewModel)
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -225,23 +236,29 @@ fun AppNavigation() {
             composable(Screen.Home.route) {
                 HomeScreen(
                     authViewModel = authViewModel,
-                    homeViewModel = homeViewModel
+                    homeViewModel = homeViewModel,
+                    sessionViewModel = sessionViewModel
                 )
             }
 
-            // Activity route
-            composable(Screen.Activity.route) {
-                ActivityScreen(
-                    onActivityClick = { activityId ->
-                        navController.navigate(Screen.ActivityDetail.createRoute(activityId))
+            // Sessions route
+            composable(Screen.Sessions.route) {
+                SessionScreen(
+                    onSessionClick = { sessionId ->
+                        navController.navigate(Screen.SessionDetail.createRoute(sessionId))
                     },
-                    viewModel = activityViewModel
+                    viewModel = sessionViewModel
                 )
             }
 
             // History route
             composable(Screen.History.route) {
-                HistoryScreen()
+                HistoryScreen(
+                    viewModel = sessionViewModel,
+                    onSessionClick = { sessionId ->
+                        navController.navigate(Screen.SessionDetail.createRoute(sessionId))
+                    }
+                )
             }
 
             // Profile route
@@ -259,18 +276,51 @@ fun AppNavigation() {
                 )
             }
 
-            // Activity detail route
+            // Session detail route
             composable(
-                route = Screen.ActivityDetail.route,
-                arguments = listOf(navArgument("activityId") { type = NavType.IntType })
+                route = Screen.SessionDetail.route,
+                arguments = listOf(navArgument("sessionId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val activityId = backStackEntry.arguments?.getInt("activityId") ?: 0
-                ActivityDetailScreen(
-                    activityId = activityId,
-                    viewModel = activityViewModel,
+                val sessionId = backStackEntry.arguments?.getInt("sessionId") ?: 0
+                SessionDetailScreen(
+                    sessionId = sessionId,
+                    viewModel = sessionViewModel,
                     onBack = { navController.popBackStack() }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SessionTrackingPermissionEffect(viewModel: SessionViewModel) {
+    val context = LocalContext.current
+    val activeSession by viewModel.activeSession.collectAsState()
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.startStepTracking()
+        } else {
+            viewModel.reportStepPermissionDenied()
+        }
+    }
+
+    LaunchedEffect(activeSession?.id) {
+        if (activeSession == null) {
+            viewModel.stopStepTracking()
+            return@LaunchedEffect
+        }
+
+        if (
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACTIVITY_RECOGNITION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            viewModel.startStepTracking()
+        } else {
+            permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
         }
     }
 }
