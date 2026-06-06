@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +28,7 @@ import com.kalindu.pocketfit.ui.viewmodel.SessionSensorState
 import com.kalindu.pocketfit.ui.viewmodel.SessionViewModel
 import com.kalindu.pocketfit.ui.viewmodel.WeatherUiState
 import com.kalindu.pocketfit.utils.LocationHelper
+import com.kalindu.pocketfit.utils.DailyGoalsValidation
 import java.text.DateFormat
 import java.util.Date
 
@@ -40,6 +43,17 @@ fun HomeScreen(
     val activeSession by sessionViewModel.activeSession.collectAsState()
     val todaySessions by sessionViewModel.todaySessions.collectAsState()
     val sensorState by sessionViewModel.sensorState.collectAsState()
+    val dailyGoals by homeViewModel.dailyGoals.collectAsState()
+    val goalsMessage by homeViewModel.goalsMessage.collectAsState()
+    var showGoalsDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(goalsMessage) {
+        goalsMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            homeViewModel.clearGoalsMessage()
+        }
+    }
 
     // Permission Launchers
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -80,16 +94,34 @@ fun HomeScreen(
     val weatherState by homeViewModel.weatherState
     val totalSteps = todaySessions.sumOf { it.steps }
     val totalCalories = todaySessions.sumOf { it.calories }
-    val stepsProgress = (totalSteps / 10_000f).coerceIn(0f, 1f)
-    val caloriesProgress = (totalCalories / 1_000f).coerceIn(0f, 1f)
+    val stepsProgress = DailyGoalsValidation.progress(totalSteps, dailyGoals.stepGoal)
+    val caloriesProgress =
+        DailyGoalsValidation.progress(totalCalories, dailyGoals.calorieGoal)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    if (showGoalsDialog) {
+        EditDailyGoalsDialog(
+            initialStepGoal = dailyGoals.stepGoal,
+            initialCalorieGoal = dailyGoals.calorieGoal,
+            onDismiss = { showGoalsDialog = false },
+            onSave = { stepGoal, calorieGoal ->
+                if (homeViewModel.saveDailyGoals(stepGoal, calorieGoal)) {
+                    showGoalsDialog = false
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { scaffoldPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(scaffoldPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         // Welcome Card
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -116,6 +148,29 @@ fun HomeScreen(
                 }
             }
         })
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "Daily Goals",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        "${dailyGoals.stepGoal} steps  •  ${dailyGoals.calorieGoal} kcal",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledTonalButton(onClick = { showGoalsDialog = true }) {
+                    Text("Edit")
+                }
+            }
+        }
 
         // Steps tracked by today's sessions.
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -175,7 +230,7 @@ fun HomeScreen(
                 }
 
                 Text(
-                    text = "Daily goal: 10,000 steps",
+                    text = "Daily goal: ${dailyGoals.stepGoal} steps",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 16.dp)
@@ -201,7 +256,7 @@ fun HomeScreen(
                     strokeCap = StrokeCap.Round
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "${(caloriesProgress * 100).toInt()}% of daily goal", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = "$totalCalories / ${dailyGoals.calorieGoal} kcal", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(text = "Estimated from session steps and saved profile weight (70 kg fallback).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -218,6 +273,78 @@ fun HomeScreen(
             }
         }
     }
+    }
+}
+
+@Composable
+private fun EditDailyGoalsDialog(
+    initialStepGoal: Int,
+    initialCalorieGoal: Int,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var stepGoal by remember(initialStepGoal) {
+        mutableStateOf(initialStepGoal.toString())
+    }
+    var calorieGoal by remember(initialCalorieGoal) {
+        mutableStateOf(initialCalorieGoal.toString())
+    }
+    var validationError by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Daily Goals", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = stepGoal,
+                    onValueChange = {
+                        stepGoal = it
+                        validationError = null
+                    },
+                    label = { Text("Daily step goal") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = calorieGoal,
+                    onValueChange = {
+                        calorieGoal = it
+                        validationError = null
+                    },
+                    label = { Text("Daily calorie goal") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                validationError?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val validation = DailyGoalsValidation.validate(stepGoal, calorieGoal)
+                    if (validation.isValid) {
+                        onSave(stepGoal, calorieGoal)
+                    } else {
+                        validationError = validation.message
+                    }
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable

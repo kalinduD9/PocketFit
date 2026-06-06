@@ -74,7 +74,6 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
 val bottomNavItems = listOf(
     Screen.Home,
     Screen.Sessions,
-    Screen.History,
     Screen.Profile,
 )
 
@@ -127,8 +126,11 @@ fun AppNavigation() {
     }
 
     // Show a back arrow on detail and register screens
-    val showBackArrow =
-        currentRoute == Screen.SessionDetail.route || currentRoute == Screen.Register.route
+    val showBackArrow = currentRoute in listOf(
+        Screen.SessionDetail.route,
+        Screen.History.route,
+        Screen.Register.route
+    )
 
     SessionTrackingPermissionEffect(sessionViewModel)
 
@@ -150,6 +152,20 @@ fun AppNavigation() {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back"
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        if (currentRoute == Screen.Sessions.route) {
+                            IconButton(
+                                onClick = {
+                                    navController.navigate(Screen.History.route)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = "Session History"
                                 )
                             }
                         }

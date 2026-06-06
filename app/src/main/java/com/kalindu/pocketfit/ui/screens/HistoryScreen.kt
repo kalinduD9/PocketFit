@@ -9,14 +9,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +40,7 @@ fun HistoryScreen(
     val groupedSessions = historicalSessions.groupBy {
         SessionCalculations.formatDate(it.startTimeMillis)
     }
+    var expandedDate by remember { mutableStateOf<String?>(null) }
 
     if (groupedSessions.isEmpty()) {
         Card(Modifier.fillMaxWidth().padding(16.dp)) {
@@ -51,46 +58,26 @@ fun HistoryScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         groupedSessions.forEach { (date, sessions) ->
-            item(key = "header-$date") {
-                Text(
-                    date,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 12.dp)
+            val isExpanded = expandedDate == date
+
+            item(key = "day-$date") {
+                DailyHistoryCard(
+                    date = date,
+                    sessions = sessions,
+                    isExpanded = isExpanded,
+                    onClick = {
+                        expandedDate = if (isExpanded) null else date
+                    }
                 )
             }
-            item(key = "summary-$date") {
-                DailySessionSummary(sessions)
-            }
-            items(sessions, key = { it.id }) { session ->
-                Card(
-                    onClick = { onSessionClick(session.id) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(session.name, fontWeight = FontWeight.Bold)
-                            Text(
-                                "${SessionCalculations.formatTime(session.startTimeMillis)}  •  " +
-                                    SessionCalculations.formatDuration(
-                                        session.actualDurationSeconds
-                                    ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("${session.steps} steps")
-                            Text(
-                                "${session.calories} kcal",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
+
+            if (isExpanded) {
+                sessions.forEach { session ->
+                    item(key = session.id) {
+                        HistorySessionCard(
+                            session = session,
+                            onClick = { onSessionClick(session.id) }
+                        )
                     }
                 }
             }
@@ -100,20 +87,92 @@ fun HistoryScreen(
 }
 
 @Composable
-private fun DailySessionSummary(sessions: List<ActivitySession>) {
+private fun DailyHistoryCard(
+    date: String,
+    sessions: List<ActivitySession>,
+    isExpanded: Boolean,
+    onClick: () -> Unit
+) {
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        date,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        if (isExpanded) "Tap to hide sessions" else "Tap to view sessions",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                Icon(
+                    imageVector = if (isExpanded) {
+                        Icons.Default.ExpandLess
+                    } else {
+                        Icons.Default.ExpandMore
+                    },
+                    contentDescription = if (isExpanded) "Collapse" else "Expand"
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                HistoryValue(sessions.sumOf { it.steps }.toString(), "Steps")
+                HistoryValue(sessions.sumOf { it.calories }.toString(), "Calories")
+                HistoryValue(sessions.size.toString(), "Sessions")
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistorySessionCard(
+    session: ActivitySession,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            HistoryValue(sessions.sumOf { it.steps }.toString(), "Steps")
-            HistoryValue(sessions.sumOf { it.calories }.toString(), "Calories")
-            HistoryValue(sessions.size.toString(), "Sessions")
+            Column(Modifier.weight(1f)) {
+                Text(session.name, fontWeight = FontWeight.Bold)
+                Text(
+                    "${SessionCalculations.formatTime(session.startTimeMillis)}  •  " +
+                        SessionCalculations.formatDuration(session.actualDurationSeconds),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${session.steps} steps")
+                Text(
+                    "${session.calories} kcal",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
@@ -121,7 +180,11 @@ private fun DailySessionSummary(sessions: List<ActivitySession>) {
 @Composable
 private fun HistoryValue(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Text(
+            value,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
         Text(label, style = MaterialTheme.typography.bodySmall)
     }
 }
