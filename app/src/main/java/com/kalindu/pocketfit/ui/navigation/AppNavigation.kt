@@ -47,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
 import com.kalindu.pocketfit.ui.viewmodel.HomeViewModel
 import com.kalindu.pocketfit.ui.viewmodel.ActivityViewModel
+import com.kalindu.pocketfit.ui.viewmodel.ProfileViewModel
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -245,8 +246,10 @@ fun AppNavigation() {
 
             // Profile route
             composable(Screen.Profile.route) {
+                val profileViewModel: ProfileViewModel = viewModel()
                 ProfileScreen(
                     authViewModel = authViewModel,
+                    profileViewModel = profileViewModel,
                     onLogoutClick = {
                         authViewModel.logout()
                         navController.navigate(Screen.Login.route) {

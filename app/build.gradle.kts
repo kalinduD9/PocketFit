@@ -79,6 +79,7 @@ dependencies {
 
     // Coil
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("androidx.exifinterface:exifinterface:1.4.1")
 
     // Room
     implementation(libs.room.runtime)

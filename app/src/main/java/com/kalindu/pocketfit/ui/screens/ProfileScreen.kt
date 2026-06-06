@@ -28,9 +28,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import coil.request.ImageRequest
 import coil.compose.rememberAsyncImagePainter
 import com.kalindu.pocketfit.ui.viewmodel.AuthState
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import com.kalindu.pocketfit.ui.viewmodel.ProfilePhotoUiState
+import com.kalindu.pocketfit.ui.viewmodel.ProfileViewModel
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -38,15 +41,21 @@ import java.util.*
 @Composable
 fun ProfileScreen(
     authViewModel: AuthViewModel,
+    profileViewModel: ProfileViewModel,
     onLogoutClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var isEditing by remember { mutableStateOf(false) }
     val authState by authViewModel.authState
+    val profilePhotoUri by profileViewModel.photoUri.collectAsState()
+    val photoRevision by profileViewModel.photoRevision.collectAsState()
+    val photoState by profileViewModel.photoState.collectAsState()
+    val isPhotoActionRunning = photoState is ProfilePhotoUiState.Saving
 
     // Profile Picture State
-    var capturedImageUri by remember { mutableStateOf<Uri?>(null) }
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showPhotoMenu by remember { mutableStateOf(false) }
+    var showRemoveConfirmation by remember { mutableStateOf(false) }
 
     // Initialize name and email from the currently logged-in Firebase user.
     var name by remember { mutableStateOf(authViewModel.currentUserName) }
@@ -64,8 +73,12 @@ fun ProfileScreen(
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
-            if (success) {
-                capturedImageUri = tempImageUri
+            val capturedUri = tempImageUri
+            tempImageUri = null
+            if (success && capturedUri != null) {
+                profileViewModel.captureCompleted(capturedUri)
+            } else {
+                profileViewModel.captureCancelled(capturedUri)
             }
         }
     )
@@ -75,10 +88,47 @@ fun ProfileScreen(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            val uri = createTempImageUri(context)
-            tempImageUri = uri
-            cameraLauncher.launch(uri)
+            launchProfileCamera(
+                context = context,
+                onUriCreated = { uri ->
+                    tempImageUri = uri
+                    cameraLauncher.launch(uri)
+                },
+                onError = profileViewModel::reportError
+            )
+        } else {
+            profileViewModel.reportError(
+                "Camera permission is required to take a profile picture."
+            )
         }
+    }
+
+    if (showRemoveConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showRemoveConfirmation = false },
+            icon = { Icon(Icons.Default.Delete, contentDescription = null) },
+            title = { Text("Remove profile picture?") },
+            text = { Text("Your current profile picture will be removed from your account.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showRemoveConfirmation = false
+                        profileViewModel.removePhoto()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Column(
@@ -109,9 +159,16 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(100.dp)
                         ) {
-                            if (capturedImageUri != null) {
+                            if (profilePhotoUri != null) {
                                 Image(
-                                    painter = rememberAsyncImagePainter(capturedImageUri),
+                                    painter = rememberAsyncImagePainter(
+                                        ImageRequest.Builder(context)
+                                            .data(profilePhotoUri)
+                                            .memoryCacheKey("${profilePhotoUri}_$photoRevision")
+                                            .diskCacheKey("${profilePhotoUri}_$photoRevision")
+                                            .crossfade(true)
+                                            .build()
+                                    ),
                                     contentDescription = "Profile Picture",
                                     modifier = Modifier.clip(CircleShape),
                                     contentScale = ContentScale.Crop
@@ -126,41 +183,123 @@ fun ProfileScreen(
                             }
                         }
 
-                        // Camera edit badge
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .align(Alignment.BottomEnd)
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    val permissionCheckResult = ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.CAMERA
-                                    )
-                                    if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
-                                        val uri = createTempImageUri(context)
-                                        tempImageUri = uri
-                                        cameraLauncher.launch(uri)
-                                    } else {
-                                        permissionLauncher.launch(Manifest.permission.CAMERA)
-                                    }
-                                },
-                                modifier = Modifier.size(32.dp)
+                        if (isPhotoActionRunning) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f),
+                                modifier = Modifier.size(100.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "Change Profile Picture",
-                                    tint = MaterialTheme.colorScheme.onSecondary,
-                                    modifier = Modifier.size(18.dp)
+                                Box(contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 3.dp
+                                    )
+                                }
+                            }
+                        }
+
+                        // Camera edit badge
+                        Box(modifier = Modifier.align(Alignment.BottomEnd)) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                IconButton(
+                                    onClick = { showPhotoMenu = true },
+                                    enabled = !isPhotoActionRunning,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = "Profile picture options",
+                                        tint = MaterialTheme.colorScheme.onSecondary,
+                                        modifier = Modifier.size(19.dp)
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = showPhotoMenu,
+                                onDismissRequest = { showPhotoMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (profilePhotoUri == null) {
+                                                "Take profile picture"
+                                            } else {
+                                                "Replace profile picture"
+                                            }
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.CameraAlt, contentDescription = null)
+                                    },
+                                    onClick = {
+                                        showPhotoMenu = false
+                                        profileViewModel.clearPhotoState()
+                                        val permissionCheckResult = ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.CAMERA
+                                        )
+                                        if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
+                                            launchProfileCamera(
+                                                context = context,
+                                                onUriCreated = { uri ->
+                                                    tempImageUri = uri
+                                                    cameraLauncher.launch(uri)
+                                                },
+                                                onError = profileViewModel::reportError
+                                            )
+                                        } else {
+                                            permissionLauncher.launch(Manifest.permission.CAMERA)
+                                        }
+                                    }
                                 )
+
+                                if (profilePhotoUri != null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Remove profile picture") },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        },
+                                        onClick = {
+                                            showPhotoMenu = false
+                                            showRemoveConfirmation = true
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
+
+                    when (val state = photoState) {
+                        is ProfilePhotoUiState.Error -> {
+                            Text(
+                                text = state.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        is ProfilePhotoUiState.Success -> {
+                            Text(
+                                text = state.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        else -> Unit
+                    }
 
                     Text(
                         text = name,
@@ -388,11 +527,26 @@ fun ProfileScreen(
     }
 }
 
+private fun launchProfileCamera(
+    context: Context,
+    onUriCreated: (Uri) -> Unit,
+    onError: (String) -> Unit
+) {
+    runCatching {
+        createTempImageUri(context)
+    }.onSuccess(onUriCreated)
+        .onFailure {
+            onError("Unable to prepare the camera. Please try again.")
+        }
+}
+
 private fun createTempImageUri(context: Context): Uri {
-    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-    val imageFileName = "JPEG_" + timeStamp + "_"
+    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+    val imageFileName = "JPEG_${timeStamp}_"
     val storageDir = File(context.cacheDir, "images").apply {
-        if (!exists()) mkdirs()
+        if (!exists() && !mkdirs()) {
+            error("Unable to create the image cache directory.")
+        }
     }
     val file = File.createTempFile(imageFileName, ".jpg", storageDir)
     return FileProvider.getUriForFile(

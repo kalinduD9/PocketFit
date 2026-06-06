@@ -1,0 +1,14 @@
+{
+  "weather": [
+    {
+      "main": "Clear",
+      "description": "offline fitness guidance",
+      "icon": "01d"
+    }
+  ],
+  "main": {
+    "temp": 27.0,
+    "humidity": 70
+  },
+  "name": "Offline Mode"
+}

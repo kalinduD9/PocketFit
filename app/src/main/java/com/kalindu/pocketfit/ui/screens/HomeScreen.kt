@@ -20,11 +20,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.kalindu.pocketfit.data.repository.WeatherSource
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
 import com.kalindu.pocketfit.ui.viewmodel.HomeViewModel
 import com.kalindu.pocketfit.ui.viewmodel.WeatherUiState
 import com.kalindu.pocketfit.utils.LocationHelper
 import com.kalindu.pocketfit.utils.SampleData
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
 fun HomeScreen(
@@ -46,9 +49,11 @@ fun HomeScreen(
                 if (location != null) {
                     homeViewModel.getWeatherForLocation(location.latitude, location.longitude)
                 } else {
-                    homeViewModel.setWeatherError("Unable to retrieve location using GPS. Tap to retry.")
+                    homeViewModel.loadOfflineWeather()
                 }
             }
+        } else {
+            homeViewModel.loadOfflineWeather()
         }
     }
 
@@ -67,7 +72,11 @@ fun HomeScreen(
                           ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (hasLocation) {
             locationHelper.getCurrentLocation { location ->
-                if (location != null) homeViewModel.getWeatherForLocation(location.latitude, location.longitude)
+                if (location != null) {
+                    homeViewModel.getWeatherForLocation(location.latitude, location.longitude)
+                } else {
+                    homeViewModel.loadOfflineWeather()
+                }
             }
         } else {
             locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
@@ -116,7 +125,11 @@ fun HomeScreen(
         WeatherStatusCard(weatherState, onRetry = {
             homeViewModel.setWeatherLoading()
             locationHelper.getCurrentLocation { loc ->
-                if (loc != null) homeViewModel.getWeatherForLocation(loc.latitude, loc.longitude)
+                if (loc != null) {
+                    homeViewModel.getWeatherForLocation(loc.latitude, loc.longitude)
+                } else {
+                    homeViewModel.loadOfflineWeather()
+                }
             }
         })
 
@@ -237,10 +250,17 @@ fun WeatherStatusCard(state: WeatherUiState, onRetry: () -> Unit) {
             when (state) {
                 is WeatherUiState.Loading -> CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onTertiaryContainer)
                 is WeatherUiState.Success -> {
-                    val weather = state.weather.weather.firstOrNull()
-                    val temp = state.weather.main.temp.toInt()
-                    val city = state.weather.cityName
+                    val weatherData = state.data
+                    val weather = weatherData.weather.weather.firstOrNull()
+                    val temp = weatherData.weather.main.temp.toInt()
+                    val city = weatherData.weather.cityName
                     val (status, tip, icon) = when {
+                        weatherData.source == WeatherSource.BUNDLED ->
+                            Triple(
+                                "Offline guidance",
+                                "Live weather is unavailable. An indoor workout is a reliable choice.",
+                                "🏠"
+                            )
                         weather?.main == "Rain" || weather?.main == "Thunderstorm" || weather?.main == "Drizzle" -> Triple("Rainy", "Likely to rain. Indoor workout recommended! 🏠", "🌧️")
                         weather?.main == "Clouds" -> {
                             val description = weather.description.lowercase()
@@ -254,13 +274,49 @@ fun WeatherStatusCard(state: WeatherUiState, onRetry: () -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Text(text = icon, fontSize = 32.sp, modifier = Modifier.padding(end = 12.dp))
                             Column {
-                                Text(text = "$status in $city", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer)
-                                Text(text = "$temp°C", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f))
+                                Text(
+                                    text = if (weatherData.source == WeatherSource.BUNDLED) {
+                                        status
+                                    } else {
+                                        "$status in $city"
+                                    },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                if (weatherData.source != WeatherSource.BUNDLED) {
+                                    Text(
+                                        text = "$temp°C",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f), shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
                             Text(text = tip, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onTertiaryContainer, textAlign = TextAlign.Center, modifier = Modifier.padding(8.dp))
+                        }
+                        if (weatherData.source != WeatherSource.LIVE) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val offlineLabel = when (weatherData.source) {
+                                WeatherSource.CACHED -> {
+                                    val savedAt = weatherData.savedAtEpochMillis?.let {
+                                        DateFormat.getDateTimeInstance(
+                                            DateFormat.MEDIUM,
+                                            DateFormat.SHORT
+                                        ).format(Date(it))
+                                    }
+                                    if (savedAt == null) "Offline: saved weather" else "Offline: saved $savedAt"
+                                }
+                                WeatherSource.BUNDLED -> "Offline: general fitness guidance"
+                                WeatherSource.LIVE -> ""
+                            }
+                            Text(
+                                text = offlineLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.75f)
+                            )
                         }
                     }
                 }
