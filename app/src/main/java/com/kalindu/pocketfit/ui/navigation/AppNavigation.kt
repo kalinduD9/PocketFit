@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -38,6 +39,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kalindu.pocketfit.ui.screens.HistoryScreen
+import com.kalindu.pocketfit.ui.screens.ExerciseDetailScreen
+import com.kalindu.pocketfit.ui.screens.ExerciseScreen
 import com.kalindu.pocketfit.ui.screens.HomeScreen
 import com.kalindu.pocketfit.ui.screens.LoginScreen
 import com.kalindu.pocketfit.ui.screens.ProfileScreen
@@ -53,6 +56,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import com.kalindu.pocketfit.ui.viewmodel.ExerciseViewModel
 import com.kalindu.pocketfit.ui.viewmodel.HomeViewModel
 import com.kalindu.pocketfit.ui.viewmodel.ProfileViewModel
 import com.kalindu.pocketfit.ui.viewmodel.SessionViewModel
@@ -63,10 +67,14 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object Register : Screen("register", "Register")
     object Home : Screen("home", "Home", Icons.Default.Home)
     object Sessions : Screen("sessions", "Sessions", Icons.Default.Timer)
+    object Exercises : Screen("exercises", "Exercises", Icons.Default.FitnessCenter)
     object History : Screen("history", "History", Icons.Default.History)
     object Profile : Screen("profile", "Profile", Icons.Default.Person)
     object SessionDetail : Screen("session_detail/{sessionId}", "Session Details") {
         fun createRoute(sessionId: Int) = "session_detail/$sessionId"
+    }
+    object ExerciseDetail : Screen("exercise_detail/{exerciseId}", "Exercise Details") {
+        fun createRoute(exerciseId: Int) = "exercise_detail/$exerciseId"
     }
 }
 
@@ -74,6 +82,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
 val bottomNavItems = listOf(
     Screen.Home,
     Screen.Sessions,
+    Screen.Exercises,
     Screen.Profile,
 )
 
@@ -86,6 +95,7 @@ fun AppNavigation() {
     val authViewModel: AuthViewModel = viewModel()
     val homeViewModel: HomeViewModel = viewModel()
     val sessionViewModel: SessionViewModel = viewModel()
+    val exerciseViewModel: ExerciseViewModel = viewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -118,9 +128,11 @@ fun AppNavigation() {
     val topBarTitle = when (currentRoute) {
         Screen.Home.route -> "PocketFit"
         Screen.Sessions.route -> Screen.Sessions.title
+        Screen.Exercises.route -> Screen.Exercises.title
         Screen.History.route -> Screen.History.title
         Screen.Profile.route -> Screen.Profile.title
         Screen.SessionDetail.route -> Screen.SessionDetail.title
+        Screen.ExerciseDetail.route -> Screen.ExerciseDetail.title
         Screen.Register.route -> "Create Account"
         else -> ""
     }
@@ -128,6 +140,7 @@ fun AppNavigation() {
     // Show a back arrow on detail and register screens
     val showBackArrow = currentRoute in listOf(
         Screen.SessionDetail.route,
+        Screen.ExerciseDetail.route,
         Screen.History.route,
         Screen.Register.route
     )
@@ -277,6 +290,18 @@ fun AppNavigation() {
                 )
             }
 
+            // Exercises route
+            composable(Screen.Exercises.route) {
+                ExerciseScreen(
+                    viewModel = exerciseViewModel,
+                    onExerciseClick = { exerciseId ->
+                        navController.navigate(
+                            Screen.ExerciseDetail.createRoute(exerciseId)
+                        )
+                    }
+                )
+            }
+
             // Profile route
             composable(Screen.Profile.route) {
                 val profileViewModel: ProfileViewModel = viewModel()
@@ -303,6 +328,18 @@ fun AppNavigation() {
                     sessionId = sessionId,
                     viewModel = sessionViewModel,
                     onBack = { navController.popBackStack() }
+                )
+            }
+
+            // Exercise detail route
+            composable(
+                route = Screen.ExerciseDetail.route,
+                arguments = listOf(navArgument("exerciseId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val exerciseId = backStackEntry.arguments?.getInt("exerciseId") ?: 0
+                ExerciseDetailScreen(
+                    exerciseId = exerciseId,
+                    viewModel = exerciseViewModel
                 )
             }
         }

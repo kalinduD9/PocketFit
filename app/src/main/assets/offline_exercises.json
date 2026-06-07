@@ -1,0 +1,82 @@
+[
+  {
+    "id": -1,
+    "name": "Bodyweight Squat",
+    "description": "Stand with feet shoulder-width apart. Lower your hips while keeping your chest upright, then press through your feet to stand.",
+    "category": "Legs",
+    "muscles": ["Quads", "Glutes", "Hamstrings"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": -2,
+    "name": "Wall Push-Up",
+    "description": "Place your hands against a wall, bend your elbows to move your chest toward it, then push back to the starting position.",
+    "category": "Chest",
+    "muscles": ["Chest", "Triceps", "Shoulders"],
+    "equipment": ["Wall"]
+  },
+  {
+    "id": -3,
+    "name": "Glute Bridge",
+    "description": "Lie on your back with knees bent. Lift your hips until your shoulders, hips, and knees form a straight line, then lower slowly.",
+    "category": "Legs",
+    "muscles": ["Glutes", "Hamstrings"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": -4,
+    "name": "Standing Knee Raises",
+    "description": "Stand tall and alternately raise each knee toward your chest at a controlled pace while keeping your core engaged.",
+    "category": "Cardio",
+    "muscles": ["Abs", "Hip flexors"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": -5,
+    "name": "Forearm Plank",
+    "description": "Support your body on your forearms and toes. Keep a straight line from shoulders to heels and hold while breathing normally.",
+    "category": "Abs",
+    "muscles": ["Abs", "Shoulders", "Back"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": -6,
+    "name": "Reverse Lunge",
+    "description": "Step one foot backward and lower both knees. Push through the front foot to return, then alternate sides.",
+    "category": "Legs",
+    "muscles": ["Quads", "Glutes", "Hamstrings"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": -7,
+    "name": "Bird Dog",
+    "description": "From hands and knees, extend one arm and the opposite leg. Pause, return with control, and switch sides.",
+    "category": "Back",
+    "muscles": ["Back", "Abs", "Glutes"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": -8,
+    "name": "Calf Raise",
+    "description": "Stand upright, rise onto the balls of your feet, pause briefly, and lower your heels with control.",
+    "category": "Calves",
+    "muscles": ["Calves"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": -9,
+    "name": "Arm Circles",
+    "description": "Extend both arms to the sides and make controlled circles. Reverse direction after several repetitions.",
+    "category": "Shoulders",
+    "muscles": ["Shoulders"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": -10,
+    "name": "Step Jack",
+    "description": "Step one foot sideways while raising both arms overhead. Return to the center and repeat on the other side.",
+    "category": "Cardio",
+    "muscles": ["Quads", "Shoulders", "Glutes"],
+    "equipment": ["Bodyweight"]
+  }
+]
