@@ -4,6 +4,10 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -12,6 +16,7 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,6 +24,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -26,9 +33,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -56,10 +68,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import com.kalindu.pocketfit.ui.viewmodel.ConnectivityViewModel
 import com.kalindu.pocketfit.ui.viewmodel.ExerciseViewModel
 import com.kalindu.pocketfit.ui.viewmodel.HomeViewModel
 import com.kalindu.pocketfit.ui.viewmodel.ProfileViewModel
 import com.kalindu.pocketfit.ui.viewmodel.SessionViewModel
+import com.kalindu.pocketfit.utils.ConnectivityStatus
 
 // Sealed class for navigation routes
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
@@ -96,6 +110,10 @@ fun AppNavigation() {
     val homeViewModel: HomeViewModel = viewModel()
     val sessionViewModel: SessionViewModel = viewModel()
     val exerciseViewModel: ExerciseViewModel = viewModel()
+    val connectivityViewModel: ConnectivityViewModel = viewModel()
+    val connectivityStatus by connectivityViewModel.connectivity.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var wasOffline by remember { mutableStateOf(false) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -147,50 +165,76 @@ fun AppNavigation() {
 
     SessionTrackingPermissionEffect(sessionViewModel)
 
+    LaunchedEffect(connectivityStatus) {
+        when (connectivityStatus) {
+            ConnectivityStatus.OFFLINE -> wasOffline = true
+            ConnectivityStatus.ONLINE -> {
+                if (wasOffline) {
+                    homeViewModel.refreshWeather()
+                    exerciseViewModel.loadExercises()
+                    if (currentRoute == Screen.ExerciseDetail.route) {
+                        navBackStackEntry?.arguments?.getInt("exerciseId")?.let {
+                            exerciseViewModel.loadExercise(it)
+                        }
+                    }
+                    snackbarHostState.showSnackbar("Internet connection restored.")
+                    wasOffline = false
+                }
+            }
+            ConnectivityStatus.CHECKING -> Unit
+        }
+    }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (showTopBar) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = topBarTitle,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    scrollBehavior = scrollBehavior,
-                    navigationIcon = {
-                        if (showBackArrow) {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        if (currentRoute == Screen.Sessions.route) {
-                            IconButton(
-                                onClick = {
-                                    navController.navigate(Screen.History.route)
+                Column {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = topBarTitle,
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        scrollBehavior = scrollBehavior,
+                        navigationIcon = {
+                            if (showBackArrow) {
+                                IconButton(onClick = { navController.popBackStack() }) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back"
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.History,
-                                    contentDescription = "Session History"
-                                )
                             }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                        scrolledContainerColor = MaterialTheme.colorScheme.primary
+                        },
+                        actions = {
+                            if (currentRoute == Screen.Sessions.route) {
+                                IconButton(
+                                    onClick = {
+                                        navController.navigate(Screen.History.route)
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.History,
+                                        contentDescription = "Session History"
+                                    )
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                            actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                            scrolledContainerColor = MaterialTheme.colorScheme.primary
+                        )
                     )
-                )
+                    if (connectivityStatus == ConnectivityStatus.OFFLINE) {
+                        OfflineBanner()
+                    }
+                }
             }
         },
         bottomBar = {
@@ -376,6 +420,29 @@ private fun SessionTrackingPermissionEffect(viewModel: SessionViewModel) {
         } else {
             permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
         }
+    }
+}
+
+@Composable
+private fun OfflineBanner() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.WifiOff,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onErrorContainer
+        )
+        Text(
+            text = "No internet connection. Cached or offline data will be used.",
+            modifier = Modifier.padding(start = 8.dp),
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 

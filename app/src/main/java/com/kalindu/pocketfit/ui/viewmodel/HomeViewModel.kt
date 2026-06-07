@@ -19,6 +19,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = WeatherRepository(application.applicationContext)
     private val goalsRepository =
         DailyGoalsRepository(application.applicationContext)
+    private var lastWeatherCoordinates: Pair<Double, Double>? = null
 
     private val _weatherState = mutableStateOf<WeatherUiState>(WeatherUiState.Loading)
     val weatherState: State<WeatherUiState> = _weatherState
@@ -52,6 +53,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun getWeatherForLocation(latitude: Double, longitude: Double) {
+        lastWeatherCoordinates = latitude to longitude
         setWeatherLoading()
         viewModelScope.launch {
             repository.fetchWeatherByCoordinates(latitude, longitude).onSuccess { weatherData ->
@@ -59,6 +61,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             }.onFailure { error ->
                 _weatherState.value = WeatherUiState.Error(error.message ?: "Unknown error")
             }
+        }
+    }
+
+    fun refreshWeather() {
+        lastWeatherCoordinates?.let { (latitude, longitude) ->
+            getWeatherForLocation(latitude, longitude)
         }
     }
 
