@@ -19,6 +19,13 @@ class AuthViewModel(
     // Public immutable state - UI can read but not modify
     val authState: State<AuthState> = _authState
 
+    private val _nameUpdateState = mutableStateOf<NameUpdateState>(NameUpdateState.Idle)
+    val nameUpdateState: State<NameUpdateState> = _nameUpdateState
+
+    private val _currentUserName = mutableStateOf(
+        authService.getCurrentUser()?.displayName ?: "User"
+    )
+
     // Handle user registration
     // @param email User's email
     // @param password User's password
@@ -32,6 +39,8 @@ class AuthViewModel(
             val result = authService.registerWithEmail(email, password, name)
 
             _authState.value = if (result.success) {
+                _currentUserName.value =
+                    authService.getCurrentUser()?.displayName ?: name.trim()
                 AuthState.Authenticated("Registration successful! Welcome to PocketFit")
             } else {
                 AuthState.Error(result.errorMessage ?: "Registration failed")
@@ -51,6 +60,8 @@ class AuthViewModel(
             val result = authService.loginWithEmail(email, password)
 
             _authState.value = if (result.success) {
+                _currentUserName.value =
+                    authService.getCurrentUser()?.displayName ?: "User"
                 AuthState.Authenticated("Login successful!")
             } else {
                 AuthState.Error(result.errorMessage ?: "Login failed")
@@ -61,6 +72,8 @@ class AuthViewModel(
     // Handle user logout
     fun logout() {
         authService.signOut()
+        _currentUserName.value = "User"
+        _nameUpdateState.value = NameUpdateState.Idle
         _authState.value = AuthState.Idle
     }
 
@@ -86,6 +99,32 @@ class AuthViewModel(
         }
     }
 
+    fun updateName(name: String) {
+        val trimmedName = name.trim()
+        if (trimmedName.length < 2) {
+            _nameUpdateState.value =
+                NameUpdateState.Error("Name must contain at least 2 characters.")
+            return
+        }
+
+        _nameUpdateState.value = NameUpdateState.Loading
+        viewModelScope.launch {
+            val result = authService.updateDisplayName(trimmedName)
+            if (result.success) {
+                _currentUserName.value = trimmedName
+                _nameUpdateState.value =
+                    NameUpdateState.Success(result.message ?: "Name updated successfully")
+            } else {
+                _nameUpdateState.value =
+                    NameUpdateState.Error(result.errorMessage ?: "Failed to update name")
+            }
+        }
+    }
+
+    fun clearNameUpdateState() {
+        _nameUpdateState.value = NameUpdateState.Idle
+    }
+
     // Clear error messages so they don't persist
     fun clearError() {
         _authState.value = AuthState.Idle
@@ -95,7 +134,7 @@ class AuthViewModel(
     // This is set during registration via UserProfileChangeRequest.
     // @return The user's display name, or "User" if not available
     val currentUserName: String
-        get() = authService.getCurrentUser()?.displayName ?: "User"
+        get() = _currentUserName.value
 
     // Get the email of the currently logged-in user.
     // @return The user's email, or an empty string if not available
@@ -110,4 +149,11 @@ sealed class AuthState {
     data class Authenticated(val message: String) : AuthState()
     data class Success(val message: String) : AuthState()
     data class Error(val message: String) : AuthState()
+}
+
+sealed class NameUpdateState {
+    data object Idle : NameUpdateState()
+    data object Loading : NameUpdateState()
+    data class Success(val message: String) : NameUpdateState()
+    data class Error(val message: String) : NameUpdateState()
 }

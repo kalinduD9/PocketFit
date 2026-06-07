@@ -2,11 +2,10 @@ package com.kalindu.pocketfit.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -55,6 +54,7 @@ fun HistoryScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         groupedSessions.forEach { (date, sessions) ->
@@ -82,7 +82,6 @@ fun HistoryScreen(
                 }
             }
         }
-        item { Spacer(Modifier.height(16.dp)) }
     }
 }
 
@@ -150,7 +149,7 @@ private fun HistorySessionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),

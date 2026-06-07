@@ -1,7 +1,6 @@
 package com.kalindu.pocketfit.data.repository
 
 import android.content.Context
-import com.kalindu.pocketfit.BuildConfig
 import com.kalindu.pocketfit.data.api.WeatherApiService
 import com.kalindu.pocketfit.data.model.WeatherResponse
 import com.google.gson.Gson
@@ -14,7 +13,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
 
 class WeatherRepository(private val context: Context) {
-    private val apiKey = BuildConfig.OPENWEATHER_API_KEY
+    private val apiKey = "14cd45b3f58b05203cdadec3f1bb1f91"
     private val baseUrl = "https://api.openweathermap.org/data/2.5/"
     private val gson = Gson()
     private val cacheFile = File(context.filesDir, WEATHER_CACHE_FILE)

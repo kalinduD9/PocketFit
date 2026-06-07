@@ -26,8 +26,7 @@ class ProfileDetailsRepository(
         return ProfileDetails(
             weightKg = weight,
             heightCm = height,
-            age = age,
-            fitnessGoal = preferences.getString("$prefix.goal", "").orEmpty()
+            age = age
         )
     }
 
@@ -37,7 +36,7 @@ class ProfileDetailsRepository(
             .putFloat("$prefix.weight", details.weightKg!!.toFloat())
             .putInt("$prefix.height", details.heightCm!!)
             .putInt("$prefix.age", details.age!!)
-            .putString("$prefix.goal", details.fitnessGoal)
+            .remove("$prefix.goal")
             .apply()
     }
 

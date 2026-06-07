@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "192068845965",
+    "project_id": "pocketfit-abd9b",
+    "storage_bucket": "pocketfit-abd9b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:192068845965:android:e191558ab9cbef9d987dc4",
+        "android_client_info": {
+          "package_name": "com.kalindu.pocketfit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHBfz6ung1L9Je-ljrtbXJ_0nUcsW6gOI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

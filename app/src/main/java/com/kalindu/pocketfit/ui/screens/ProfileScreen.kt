@@ -19,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -32,6 +31,7 @@ import coil.request.ImageRequest
 import coil.compose.rememberAsyncImagePainter
 import com.kalindu.pocketfit.ui.viewmodel.AuthState
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import com.kalindu.pocketfit.ui.viewmodel.NameUpdateState
 import com.kalindu.pocketfit.ui.viewmodel.ProfileDetailsUiState
 import com.kalindu.pocketfit.ui.viewmodel.ProfilePhotoUiState
 import com.kalindu.pocketfit.ui.viewmodel.ProfileViewModel
@@ -50,6 +50,7 @@ fun ProfileScreen(
     val context = LocalContext.current
     var isEditing by remember { mutableStateOf(false) }
     val authState by authViewModel.authState
+    val nameUpdateState by authViewModel.nameUpdateState
     val profilePhotoUri by profileViewModel.photoUri.collectAsState()
     val photoRevision by profileViewModel.photoRevision.collectAsState()
     val photoState by profileViewModel.photoState.collectAsState()
@@ -66,17 +67,17 @@ fun ProfileScreen(
     // Initialize name and email from the currently logged-in Firebase user.
     val name = authViewModel.currentUserName
     val email = authViewModel.currentUserEmail
+    var isEditingName by remember { mutableStateOf(false) }
+    var editedName by remember(name) { mutableStateOf(name) }
     var weight by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
-    var goal by remember { mutableStateOf("") }
 
     LaunchedEffect(profileDetails, isEditing) {
         if (!isEditing) {
             weight = profileDetails.weightKg?.let { "%.1f".format(it) }.orEmpty()
             height = profileDetails.heightCm?.toString().orEmpty()
             age = profileDetails.age?.toString().orEmpty()
-            goal = profileDetails.fitnessGoal
         }
     }
 
@@ -328,7 +329,167 @@ fun ProfileScreen(
             }
         }
 
-        // Profile Details Card
+        // Account Card
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Account",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isEditingName) {
+                            TextButton(
+                                onClick = {
+                                    editedName = name
+                                    isEditingName = false
+                                    authViewModel.clearNameUpdateState()
+                                },
+                                enabled = nameUpdateState !is NameUpdateState.Loading
+                            ) {
+                                Text("Cancel")
+                            }
+                        }
+                        FilledTonalButton(
+                            onClick = {
+                                if (isEditingName) {
+                                    authViewModel.updateName(editedName)
+                                } else {
+                                    editedName = name
+                                    authViewModel.clearNameUpdateState()
+                                    isEditingName = true
+                                }
+                            },
+                            enabled = nameUpdateState !is NameUpdateState.Loading,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            if (nameUpdateState is NameUpdateState.Loading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (isEditingName) {
+                                        Icons.Default.Check
+                                    } else {
+                                        Icons.Default.Edit
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (isEditingName) "Save" else "Edit")
+                            }
+                        }
+                    }
+                }
+
+                ProfileDetailRow(
+                    icon = Icons.Default.Person,
+                    label = "Full Name",
+                    value = editedName,
+                    isEditing = isEditingName,
+                    onValueChange = { editedName = it }
+                )
+
+                when (val state = nameUpdateState) {
+                    is NameUpdateState.Error -> Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    is NameUpdateState.Success -> {
+                        LaunchedEffect(state) {
+                            isEditingName = false
+                            editedName = name
+                        }
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    else -> Unit
+                }
+
+                HorizontalDivider()
+
+                ProfileDetailRow(
+                    icon = Icons.Default.Email,
+                    label = "Email",
+                    value = email
+                )
+
+                HorizontalDivider()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Password",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Get a reset link by email.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    FilledTonalButton(
+                        onClick = { authViewModel.resetPassword(email) },
+                        enabled = authState !is AuthState.Loading && email.isNotBlank()
+                    ) {
+                        if (authState is AuthState.Loading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.LockReset,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Reset")
+                        }
+                    }
+                }
+
+                when (val state = authState) {
+                    is AuthState.Error -> Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    is AuthState.Success -> Text(
+                        text = state.message,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    else -> Unit
+                }
+            }
+        }
+
+        // Personal Details Card
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier
@@ -342,7 +503,7 @@ fun ProfileScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Profile Details",
+                        text = "Personal Details",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -350,7 +511,7 @@ fun ProfileScreen(
                     FilledTonalButton(
                         onClick = {
                             if (isEditing) {
-                                if (profileViewModel.saveDetails(weight, height, age, goal)) {
+                                if (profileViewModel.saveDetails(weight, height, age)) {
                                     isEditing = false
                                 }
                             } else {
@@ -372,24 +533,6 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Status Message
-                if (authState is AuthState.Error || authState is AuthState.Success) {
-                    val (color, message) = when (authState) {
-                        is AuthState.Error -> MaterialTheme.colorScheme.error to (authState as AuthState.Error).message
-                        is AuthState.Success -> Color(0xFF4CAF50) to (authState as AuthState.Success).message
-                        else -> Color.Transparent to ""
-                    }
-                    Text(
-                        text = message,
-                        color = color,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        fontSize = 12.sp
-                    )
-                }
-
                 when (val state = detailsState) {
                     is ProfileDetailsUiState.Error -> Text(
                         text = state.message,
@@ -405,41 +548,6 @@ fun ProfileScreen(
                     )
                     ProfileDetailsUiState.Idle -> Unit
                 }
-
-                ProfileDetailRow(
-                    icon = Icons.Default.Person,
-                    label = "Full Name",
-                    value = name,
-                    isEditing = false,
-                    onValueChange = {}
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                ProfileDetailRow(
-                    icon = Icons.Default.Email,
-                    label = "Email",
-                    value = email,
-                    isEditing = false,
-                    onValueChange = {}
-                )
-
-                if (!isEditing) {
-                    TextButton(
-                        onClick = { authViewModel.resetPassword(email) },
-                        modifier = Modifier.padding(start = 40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LockReset,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Reset Password", fontSize = 14.sp)
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                 ProfileDetailRow(
                     icon = Icons.Default.FitnessCenter,
@@ -469,16 +577,6 @@ fun ProfileScreen(
                     value = age,
                     isEditing = isEditing,
                     onValueChange = { age = it }
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                ProfileDetailRow(
-                    icon = Icons.Default.Flag,
-                    label = "Fitness Goal",
-                    value = goal,
-                    isEditing = isEditing,
-                    onValueChange = { goal = it }
                 )
             }
         }

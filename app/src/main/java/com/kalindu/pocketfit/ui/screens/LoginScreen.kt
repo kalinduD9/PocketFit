@@ -159,10 +159,7 @@ fun LoginScreen(
             TextButton(
                 onClick = {
                     if (email.isEmpty()) {
-                        // We can't use a Snackbar easily here without a Scaffold state, 
-                        // so we'll use the ViewModel to set an error
-                        authViewModel.login("", "") // Hacky way to clear/set error if we had better error handling
-                        // Actually let's just use the resetPassword and let Firebase/ViewModel handle it
+                        authViewModel.login("", "")
                         authViewModel.resetPassword("")
                     } else {
                         authViewModel.resetPassword(email)

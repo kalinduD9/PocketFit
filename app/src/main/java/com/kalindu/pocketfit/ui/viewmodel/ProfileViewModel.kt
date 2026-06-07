@@ -37,10 +37,9 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     fun saveDetails(
         weight: String,
         height: String,
-        age: String,
-        fitnessGoal: String
+        age: String
     ): Boolean {
-        val validation = ProfileValidation.validate(weight, height, age, fitnessGoal)
+        val validation = ProfileValidation.validate(weight, height, age)
         val details = validation.details
         if (details == null) {
             _detailsState.value = ProfileDetailsUiState.Error(

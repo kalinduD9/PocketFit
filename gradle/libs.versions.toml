@@ -11,7 +11,6 @@ composeBom = "2024.09.00"
 uiTextGoogleFonts = "1.10.1"
 retrofit = "3.0.0"
 okhttp = "5.3.2"
-secretsPlugin = "2.0.1"
 room = "2.8.4"
 ksp = "2.2.10-2.0.2"
 
@@ -41,6 +40,4 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-secrets-gradle-plugin = { id = "com.google.android.libraries.mapsplatform.secrets-gradle-plugin", version.ref = "secretsPlugin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-

@@ -97,6 +97,10 @@ fun HomeScreen(
     val stepsProgress = DailyGoalsValidation.progress(totalSteps, dailyGoals.stepGoal)
     val caloriesProgress =
         DailyGoalsValidation.progress(totalCalories, dailyGoals.calorieGoal)
+    val firstName = authViewModel.currentUserName
+        .trim()
+        .substringBefore(' ')
+        .ifBlank { "User" }
 
     if (showGoalsDialog) {
         EditDailyGoalsDialog(
@@ -112,7 +116,8 @@ fun HomeScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { scaffoldPadding ->
         Column(
             modifier = Modifier
@@ -128,7 +133,7 @@ fun HomeScreen(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         ) {
             Text(
-                text = "Welcome Back, ${authViewModel.currentUserName}!",
+                text = "Welcome Back, $firstName!",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -238,7 +243,7 @@ fun HomeScreen(
             }
         }
 
-        // Estimated calories burned by today's activities.
+        // Estimated calories burned by daily activities
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -257,21 +262,10 @@ fun HomeScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "$totalCalories / ${dailyGoals.calorieGoal} kcal", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = "Estimated from session steps and saved profile weight (70 kg fallback).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = "Estimated from session steps and saved profile weight.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
-        // Quick Stats Summary
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-                Text(text = "Today's Summary", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 16.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    StatItem(label = "Steps", value = totalSteps.toString(), icon = "🚶")
-                    StatItem(label = "Calories", value = totalCalories.toString(), icon = "🔥")
-                    StatItem(label = "Sessions", value = todaySessions.size.toString(), icon = "📊")
-                }
-            }
-        }
     }
     }
 }
@@ -437,11 +431,3 @@ fun WeatherStatusCard(state: WeatherUiState, onRetry: () -> Unit) {
     }
 }
 
-@Composable
-fun StatItem(label: String, value: String, icon: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text(text = icon, fontSize = 24.sp, modifier = Modifier.padding(bottom = 4.dp))
-        Text(text = value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}

@@ -14,8 +14,7 @@ object ProfileValidation {
     fun validate(
         weight: String,
         height: String,
-        age: String,
-        fitnessGoal: String
+        age: String
     ): ProfileValidationResult {
         val weightValue = weight.toDoubleOrNull()
         if (weightValue == null || weightValue !in 20.0..300.0) {
@@ -42,8 +41,7 @@ object ProfileValidation {
             details = ProfileDetails(
                 weightKg = weightValue,
                 heightCm = heightValue,
-                age = ageValue,
-                fitnessGoal = fitnessGoal.trim()
+                age = ageValue
             )
         )
     }
