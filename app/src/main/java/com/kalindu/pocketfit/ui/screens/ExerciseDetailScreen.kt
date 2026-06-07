@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kalindu.pocketfit.data.repository.ExerciseSource
 import com.kalindu.pocketfit.ui.viewmodel.ExerciseDetailUiState
 import com.kalindu.pocketfit.ui.viewmodel.ExerciseViewModel
 
@@ -48,7 +49,9 @@ fun ExerciseDetailScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                ExerciseSourceBanner(current.source)
+                if (current.source != ExerciseSource.REMOTE) {
+                    ExerciseSourceBanner(current.source)
+                }
                 Card(Modifier.fillMaxWidth()) {
                     Column(
                         Modifier.fillMaxWidth().padding(20.dp),

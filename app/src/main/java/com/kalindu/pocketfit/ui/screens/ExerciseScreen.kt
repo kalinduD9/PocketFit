@@ -53,8 +53,10 @@ fun ExerciseScreen(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item {
-                    ExerciseSourceBanner(current.source)
+                if (current.source != ExerciseSource.REMOTE) {
+                    item {
+                        ExerciseSourceBanner(current.source)
+                    }
                 }
                 items(current.exercises, key = { it.id }) { exercise ->
                     ExerciseCard(exercise) { onExerciseClick(exercise.id) }
@@ -114,17 +116,13 @@ private fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
 @Composable
 fun ExerciseSourceBanner(source: ExerciseSource) {
     val message = when (source) {
-        ExerciseSource.LIVE -> "Online exercise data from wger"
+        ExerciseSource.REMOTE -> return
         ExerciseSource.CACHED -> "Offline: showing previously downloaded exercises"
         ExerciseSource.BUNDLED -> "Offline: showing built-in exercises"
     }
     Surface(
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-        color = if (source == ExerciseSource.LIVE) {
-            MaterialTheme.colorScheme.tertiaryContainer
-        } else {
-            MaterialTheme.colorScheme.secondaryContainer
-        },
+        color = MaterialTheme.colorScheme.secondaryContainer,
         shape = MaterialTheme.shapes.medium
     ) {
         Text(

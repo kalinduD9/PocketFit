@@ -1,0 +1,162 @@
+[
+  {
+    "id": 1,
+    "name": "Bodyweight Squat",
+    "description": "Stand with feet shoulder-width apart. Lower your hips while keeping your chest upright, then press through your feet to stand.",
+    "category": "Legs",
+    "muscles": ["Quadriceps", "Glutes", "Hamstrings"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": 2,
+    "name": "Push-Up",
+    "description": "Place your hands slightly wider than your shoulders. Lower your chest with a straight body, then push back to the starting position.",
+    "category": "Chest",
+    "muscles": ["Chest", "Triceps", "Shoulders"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": 3,
+    "name": "Forward Lunge",
+    "description": "Step forward and lower both knees until the rear knee approaches the floor. Push through the front foot to return and alternate sides.",
+    "category": "Legs",
+    "muscles": ["Quadriceps", "Glutes", "Hamstrings"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": 4,
+    "name": "Forearm Plank",
+    "description": "Support your body on your forearms and toes. Keep a straight line from shoulders to heels while breathing normally.",
+    "category": "Core",
+    "muscles": ["Abdominals", "Back", "Shoulders"],
+    "equipment": ["Exercise mat"]
+  },
+  {
+    "id": 5,
+    "name": "Glute Bridge",
+    "description": "Lie on your back with knees bent. Lift your hips until your shoulders, hips, and knees form a straight line, then lower slowly.",
+    "category": "Legs",
+    "muscles": ["Glutes", "Hamstrings"],
+    "equipment": ["Exercise mat"]
+  },
+  {
+    "id": 6,
+    "name": "Mountain Climber",
+    "description": "Start in a high plank and alternately drive each knee toward your chest while keeping your hips controlled.",
+    "category": "Cardio",
+    "muscles": ["Abdominals", "Hip flexors", "Shoulders"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": 7,
+    "name": "Jumping Jack",
+    "description": "Jump your feet apart while raising your arms overhead, then jump back to the starting position at a steady pace.",
+    "category": "Cardio",
+    "muscles": ["Calves", "Shoulders", "Quadriceps"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": 8,
+    "name": "Calf Raise",
+    "description": "Stand upright, rise onto the balls of your feet, pause briefly, and lower your heels with control.",
+    "category": "Legs",
+    "muscles": ["Calves"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": 9,
+    "name": "Bird Dog",
+    "description": "From hands and knees, extend one arm and the opposite leg. Pause, return with control, and switch sides.",
+    "category": "Core",
+    "muscles": ["Back", "Abdominals", "Glutes"],
+    "equipment": ["Exercise mat"]
+  },
+  {
+    "id": 10,
+    "name": "Bicycle Crunch",
+    "description": "Lie on your back and bring opposite elbow and knee together while extending the other leg. Alternate sides slowly.",
+    "category": "Core",
+    "muscles": ["Abdominals", "Obliques"],
+    "equipment": ["Exercise mat"]
+  },
+  {
+    "id": 11,
+    "name": "Dumbbell Shoulder Press",
+    "description": "Hold dumbbells at shoulder height. Press them overhead without arching your back, then lower with control.",
+    "category": "Shoulders",
+    "muscles": ["Shoulders", "Triceps"],
+    "equipment": ["Dumbbells"]
+  },
+  {
+    "id": 12,
+    "name": "Dumbbell Row",
+    "description": "Support your body with one hand, pull a dumbbell toward your ribs, squeeze your back, and lower it slowly.",
+    "category": "Back",
+    "muscles": ["Upper back", "Lats", "Biceps"],
+    "equipment": ["Dumbbell", "Bench"]
+  },
+  {
+    "id": 13,
+    "name": "Biceps Curl",
+    "description": "Stand with dumbbells at your sides. Bend your elbows to raise the weights, then lower them without swinging.",
+    "category": "Arms",
+    "muscles": ["Biceps", "Forearms"],
+    "equipment": ["Dumbbells"]
+  },
+  {
+    "id": 14,
+    "name": "Triceps Extension",
+    "description": "Hold one dumbbell overhead, bend your elbows to lower it behind your head, then extend your arms upward.",
+    "category": "Arms",
+    "muscles": ["Triceps"],
+    "equipment": ["Dumbbell"]
+  },
+  {
+    "id": 15,
+    "name": "Goblet Squat",
+    "description": "Hold a dumbbell close to your chest. Sit your hips down between your knees, then drive through your feet to stand.",
+    "category": "Legs",
+    "muscles": ["Quadriceps", "Glutes", "Hamstrings"],
+    "equipment": ["Dumbbell"]
+  },
+  {
+    "id": 16,
+    "name": "Romanian Deadlift",
+    "description": "Hold weights in front of your thighs. Push your hips backward with a neutral spine, then squeeze your glutes to stand.",
+    "category": "Legs",
+    "muscles": ["Hamstrings", "Glutes", "Lower back"],
+    "equipment": ["Dumbbells"]
+  },
+  {
+    "id": 17,
+    "name": "Step-Up",
+    "description": "Place one foot on a stable step. Drive through that foot to stand on the step, lower carefully, and alternate sides.",
+    "category": "Legs",
+    "muscles": ["Quadriceps", "Glutes", "Calves"],
+    "equipment": ["Step or bench"]
+  },
+  {
+    "id": 18,
+    "name": "High Knees",
+    "description": "Run in place while lifting each knee toward hip height. Keep your torso upright and move your arms naturally.",
+    "category": "Cardio",
+    "muscles": ["Hip flexors", "Quadriceps", "Calves"],
+    "equipment": ["Bodyweight"]
+  },
+  {
+    "id": 19,
+    "name": "Side Plank",
+    "description": "Support your body on one forearm and the side of one foot. Keep your hips raised and your body in a straight line.",
+    "category": "Core",
+    "muscles": ["Obliques", "Shoulders", "Glutes"],
+    "equipment": ["Exercise mat"]
+  },
+  {
+    "id": 20,
+    "name": "Superman Hold",
+    "description": "Lie face down and gently lift your arms, chest, and legs from the floor. Hold briefly, then lower with control.",
+    "category": "Back",
+    "muscles": ["Lower back", "Glutes", "Shoulders"],
+    "equipment": ["Exercise mat"]
+  }
+]
