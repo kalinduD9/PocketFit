@@ -1,2 +1,4 @@
 # PocketFit
-Mobile fitness tracking app
+
+PocketFit is an Android fitness application built with Kotlin and Jetpack Compose.
+

@@ -51,10 +51,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _weatherState.value = WeatherUiState.Loading
     }
 
-    fun setWeatherError(message: String) {
-        _weatherState.value = WeatherUiState.Error(message)
-    }
-
     fun getWeatherForLocation(latitude: Double, longitude: Double) {
         setWeatherLoading()
         viewModelScope.launch {
