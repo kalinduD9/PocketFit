@@ -3,6 +3,7 @@ package com.kalindu.pocketfit.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.kalindu.pocketfit.data.local.AppDatabase
 import com.kalindu.pocketfit.data.model.ActivitySession
 import com.kalindu.pocketfit.data.model.SessionCompletionReason
@@ -11,12 +12,15 @@ import com.kalindu.pocketfit.data.repository.SessionRepository
 import com.kalindu.pocketfit.data.repository.ProfileDetailsRepository
 import com.kalindu.pocketfit.utils.SessionCalculations
 import com.kalindu.pocketfit.utils.StepSensorManager
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -28,21 +32,28 @@ enum class SessionSensorState {
     PERMISSION_DENIED
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SessionViewModel(application: Application) : AndroidViewModel(application) {
+    private val auth = FirebaseAuth.getInstance()
     private val repository = SessionRepository(
         AppDatabase.getDatabase(application).sessionDao()
     )
     private val profileDetailsRepository =
         ProfileDetailsRepository(application.applicationContext)
     private val stepSensorManager = StepSensorManager(application.applicationContext)
+    private val currentUserId = MutableStateFlow(auth.currentUser?.uid.orEmpty())
 
-    val sessions: StateFlow<List<ActivitySession>> = repository.allSessions.stateIn(
+    val sessions: StateFlow<List<ActivitySession>> = currentUserId.flatMapLatest {
+        repository.allSessions(it)
+    }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         emptyList()
     )
 
-    val activeSession: StateFlow<ActivitySession?> = repository.activeSession.stateIn(
+    val activeSession: StateFlow<ActivitySession?> = currentUserId.flatMapLatest {
+        repository.activeSession(it)
+    }.stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
         null
@@ -84,18 +95,33 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     )
 
     private var sensorBaseline: Int? = null
+    private var trackedSessionId: Int? = null
+    private var latestSessionSteps = 0
     private var creatingSession = false
     private var completingSession = false
+    private val rawStepReadings = Channel<Int>(Channel.CONFLATED)
 
     init {
+        assignExistingSessions()
+
         viewModelScope.launch {
             activeSession.collect { session ->
                 sensorBaseline = session?.stepBaseline
+                if (trackedSessionId != session?.id) {
+                    trackedSessionId = session?.id
+                    latestSessionSteps = session?.steps ?: 0
+                }
                 if (session == null) {
                     stopStepTracking()
                 } else {
                     completeIfExpired(session)
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            for (rawSteps in rawStepReadings) {
+                processRawStepReading(rawSteps)
             }
         }
 
@@ -115,6 +141,11 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         stepGoal: Int?,
         calorieGoal: Int?
     ): Boolean {
+        val userId = currentUserId.value
+        if (userId.isBlank()) {
+            _message.value = "Sign in before starting a session."
+            return false
+        }
         val validation = SessionCalculations.validateInput(
             name,
             durationMinutes,
@@ -135,6 +166,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             try {
                 repository.insert(
                     ActivitySession(
+                        userId = userId,
                         name = name.trim(),
                         plannedDurationMinutes = requireNotNull(durationMinutes),
                         stepGoal = stepGoal,
@@ -148,6 +180,11 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         return true
+    }
+
+    fun refreshUser() {
+        currentUserId.value = auth.currentUser?.uid.orEmpty()
+        assignExistingSessions()
     }
 
     fun startStepTracking() {
@@ -200,14 +237,20 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun handleRawStepReading(rawSteps: Int) {
+        rawStepReadings.trySend(rawSteps)
+    }
+
+    private suspend fun processRawStepReading(rawSteps: Int) {
         val session = activeSession.value ?: return
         val baseline = sensorBaseline ?: rawSteps.also { firstReading ->
             sensorBaseline = firstReading
-            viewModelScope.launch {
-                repository.update(session.copy(stepBaseline = firstReading))
-            }
         }
-        val sessionSteps = (rawSteps - baseline).coerceAtLeast(0)
+        val measuredSteps = (rawSteps - baseline).coerceAtLeast(0)
+        val sessionSteps = SessionCalculations.recordedSteps(
+            sensorSteps = measuredSteps,
+            currentSteps = latestSessionSteps,
+            stepGoal = session.stepGoal
+        )
         val calories = SessionCalculations.caloriesForSteps(
             sessionSteps,
             session.weightUsedKg
@@ -217,6 +260,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             steps = sessionSteps,
             calories = calories
         )
+        latestSessionSteps = sessionSteps
         val goalReason = SessionCalculations.reachedGoalReason(
             stepGoal = session.stepGoal,
             calorieGoal = session.calorieGoal,
@@ -231,7 +275,17 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                 reason = goalReason
             )
         } else if (sessionSteps != session.steps || calories != session.calories) {
-            viewModelScope.launch { repository.update(updatedSession) }
+            repository.update(updatedSession)
+        } else if (session.stepBaseline == null) {
+            repository.update(updatedSession)
+        }
+    }
+
+    private fun assignExistingSessions() {
+        val userId = currentUserId.value
+        if (userId.isBlank()) return
+        viewModelScope.launch {
+            repository.assignUnownedSessions(userId)
         }
     }
 

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kalindu.pocketfit.ui.viewmodel.AuthState
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import com.kalindu.pocketfit.utils.AuthValidation
 
 @Composable
 fun RegisterScreen(
@@ -32,9 +33,17 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(value = false) }
     var confirmPasswordVisible by remember { mutableStateOf(value = false) }
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
 
     // Get authentication state from ViewModel
     val authState by remember { authViewModel.authState }
+
+    LaunchedEffect(Unit) {
+        authViewModel.clearError()
+    }
 
     // When registration is successful, navigate to home
     LaunchedEffect(authState) {
@@ -70,7 +79,10 @@ fun RegisterScreen(
         // Name Field
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it },
+            onValueChange = {
+                name = it
+                nameError = null
+            },
             label = { Text("Full Name") },
             leadingIcon = {
                 Icon(
@@ -78,17 +90,24 @@ fun RegisterScreen(
                     contentDescription = "Name"
                 )
             },
+            isError = nameError != null,
+            supportingText = nameError?.let { message ->
+                { Text(message) }
+            },
             singleLine = true,
             enabled = authState !is AuthState.Loading,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 8.dp)
         )
 
         // Email Field
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                emailError = null
+            },
             label = { Text("Email") },
             leadingIcon = {
                 Icon(
@@ -99,17 +118,25 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
             ),
+            isError = emailError != null,
+            supportingText = emailError?.let { message ->
+                { Text(message) }
+            },
             singleLine = true,
             enabled = authState !is AuthState.Loading,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 8.dp)
         )
 
         // Password Field
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                passwordError = null
+                confirmPasswordError = null
+            },
             label = { Text("Password") },
             leadingIcon = {
                 Icon(
@@ -138,17 +165,24 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
             ),
+            isError = passwordError != null,
+            supportingText = passwordError?.let { message ->
+                { Text(message) }
+            },
             singleLine = true,
             enabled = authState !is AuthState.Loading,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 8.dp)
         )
 
         // Confirm Password Field
         OutlinedTextField(
             value = confirmPassword,
-            onValueChange = { confirmPassword = it },
+            onValueChange = {
+                confirmPassword = it
+                confirmPasswordError = null
+            },
             label = { Text("Confirm Password") },
             leadingIcon = {
                 Icon(
@@ -177,11 +211,15 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password
             ),
+            isError = confirmPasswordError != null,
+            supportingText = confirmPasswordError?.let { message ->
+                { Text(message) }
+            },
             singleLine = true,
             enabled = authState !is AuthState.Loading,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp)
+                .padding(bottom = 16.dp)
         )
 
         // Status Message Display
@@ -205,32 +243,19 @@ fun RegisterScreen(
         // Register Button
         Button(
             onClick = {
-                // Validate inputs
-                when {
-                    name.isEmpty() -> {
-                        // Show error - name required
-                        return@Button
-                    }
-                    email.isEmpty() -> {
-                        // Show error - email required
-                        return@Button
-                    }
-                    password.isEmpty() -> {
-                        // Show error - password required
-                        return@Button
-                    }
-                    password != confirmPassword -> {
-                        // Show error - passwords don't match
-                        return@Button
-                    }
-                    password.length < 6 -> {
-                        // Show error - password too short
-                        return@Button
-                    }
-                    else -> {
-                        // All validations passed, proceed with registration
-                        authViewModel.register(email, password, name)
-                    }
+                nameError = AuthValidation.nameError(name)
+                emailError = AuthValidation.emailError(email)
+                passwordError = AuthValidation.passwordError(password)
+                confirmPasswordError =
+                    AuthValidation.confirmPasswordError(password, confirmPassword)
+
+                if (
+                    nameError == null &&
+                    emailError == null &&
+                    passwordError == null &&
+                    confirmPasswordError == null
+                ) {
+                    authViewModel.register(email.trim(), password, name.trim())
                 }
             },
             modifier = Modifier
@@ -268,7 +293,10 @@ fun RegisterScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             TextButton(
-                onClick = onLoginClick,
+                onClick = {
+                    authViewModel.clearError()
+                    onLoginClick()
+                },
                 enabled = authState !is AuthState.Loading
             ) {
                 Text(

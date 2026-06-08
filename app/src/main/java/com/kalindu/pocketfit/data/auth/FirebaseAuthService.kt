@@ -1,13 +1,14 @@
 package com.kalindu.pocketfit.data.auth
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.tasks.await
 
 // Handles all Firebase Authentication operations
 class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInstance()) {
 
-    // Register a new user with email and passworde
+    // Register a new user with email and password
     suspend fun registerWithEmail(
         email: String,
         password: String,
@@ -27,20 +28,12 @@ class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInsta
         } catch (e: Exception) {
             AuthResult(
                 success = false,
-                errorMessage = when {
-                    e.message?.contains("already in use") == true ->
-                        "This email is already registered"
-                    e.message?.contains("weak") == true ->
-                        "Password must be at least 6 characters"
-                    e.message?.contains("invalid email") == true ->
-                        "Please enter a valid email address"
-                    else -> e.message ?: "Registration failed"
-                }
+                errorMessage = registrationErrorMessage(e)
             )
         }
     }
 
-    // Login user with email and passworde
+    // Login user with email and password
     suspend fun loginWithEmail(
         email: String,
         password: String
@@ -51,13 +44,7 @@ class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInsta
         } catch (e: Exception) {
             AuthResult(
                 success = false,
-                errorMessage = when {
-                    e.message?.contains("no user") == true ->
-                        "Email not found. Please register first."
-                    e.message?.contains("password") == true ->
-                        "Incorrect email or password"
-                    else -> e.message ?: "Login failed"
-                }
+                errorMessage = loginErrorMessage(e)
             )
         }
     }
@@ -81,7 +68,12 @@ class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInsta
         } catch (e: Exception) {
             AuthResult(
                 success = false,
-                errorMessage = e.message ?: "Failed to send reset email"
+                errorMessage = when ((e as? FirebaseAuthException)?.errorCode) {
+                    "ERROR_INVALID_EMAIL" -> "Enter a valid email address."
+                    "ERROR_TOO_MANY_REQUESTS" -> "Too many requests. Please try again later."
+                    "ERROR_NETWORK_REQUEST_FAILED" -> "Check your internet connection."
+                    else -> "Unable to send the reset email. Please try again."
+                }
             )
         }
     }
@@ -99,10 +91,35 @@ class FirebaseAuthService(private val auth: FirebaseAuth = FirebaseAuth.getInsta
         } catch (e: Exception) {
             AuthResult(
                 success = false,
-                errorMessage = e.message ?: "Failed to update name"
+                errorMessage = when ((e as? FirebaseAuthException)?.errorCode) {
+                    "ERROR_NETWORK_REQUEST_FAILED" -> "Check your internet connection."
+                    else -> "Unable to update your name. Please try again."
+                }
             )
         }
     }
+
+    private fun loginErrorMessage(error: Exception): String =
+        when ((error as? FirebaseAuthException)?.errorCode) {
+            "ERROR_INVALID_CREDENTIAL",
+            "ERROR_WRONG_PASSWORD",
+            "ERROR_USER_NOT_FOUND",
+            "ERROR_INVALID_EMAIL" -> "Incorrect email or password."
+            "ERROR_USER_DISABLED" -> "This account has been disabled."
+            "ERROR_TOO_MANY_REQUESTS" -> "Too many attempts. Please try again later."
+            "ERROR_NETWORK_REQUEST_FAILED" -> "Check your internet connection."
+            else -> "Unable to log in. Please try again."
+        }
+
+    private fun registrationErrorMessage(error: Exception): String =
+        when ((error as? FirebaseAuthException)?.errorCode) {
+            "ERROR_EMAIL_ALREADY_IN_USE" -> "This email is already registered."
+            "ERROR_INVALID_EMAIL" -> "Enter a valid email address."
+            "ERROR_WEAK_PASSWORD" -> "Password must contain at least 6 characters."
+            "ERROR_TOO_MANY_REQUESTS" -> "Too many requests. Please try again later."
+            "ERROR_NETWORK_REQUEST_FAILED" -> "Check your internet connection."
+            else -> "Unable to create the account. Please try again."
+        }
 }
 
 // Data class to hold authentication results

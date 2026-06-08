@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kalindu.pocketfit.ui.viewmodel.AuthState
 import com.kalindu.pocketfit.ui.viewmodel.AuthViewModel
+import com.kalindu.pocketfit.utils.AuthValidation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,9 +56,15 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(value = false) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
 
     // Get authentication state from ViewModel
     val authState by remember { authViewModel.authState }
+
+    LaunchedEffect(Unit) {
+        authViewModel.clearError()
+    }
 
     // When login is successful, navigate to home
     LaunchedEffect(authState) {
@@ -98,7 +105,10 @@ fun LoginScreen(
             // Email Field
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    emailError = null
+                },
                 label = { Text("Email") },
                 leadingIcon = {
                     Icon(
@@ -109,17 +119,24 @@ fun LoginScreen(
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email
                 ),
+                isError = emailError != null,
+                supportingText = emailError?.let { message ->
+                    { Text(message) }
+                },
                 singleLine = true,
                 enabled = authState !is AuthState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(bottom = 8.dp)
             )
 
             // Password Field
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    passwordError = null
+                },
                 label = { Text("Password") },
                 leadingIcon = {
                     Icon(
@@ -148,6 +165,10 @@ fun LoginScreen(
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password
                 ),
+                isError = passwordError != null,
+                supportingText = passwordError?.let { message ->
+                    { Text(message) }
+                },
                 singleLine = true,
                 enabled = authState !is AuthState.Loading,
                 modifier = Modifier
@@ -158,11 +179,9 @@ fun LoginScreen(
             // Forgot Password Link
             TextButton(
                 onClick = {
-                    if (email.isEmpty()) {
-                        authViewModel.login("", "")
-                        authViewModel.resetPassword("")
-                    } else {
-                        authViewModel.resetPassword(email)
+                    emailError = AuthValidation.emailError(email)
+                    if (emailError == null) {
+                        authViewModel.resetPassword(email.trim())
                     }
                 },
                 modifier = Modifier
@@ -200,12 +219,11 @@ fun LoginScreen(
             // Login Button
             Button(
                 onClick = {
-                    // Validate inputs before making Firebase call
-                    if (email.isEmpty() || password.isEmpty()) {
-                        // You might want to show an error here
-                        return@Button
+                    emailError = AuthValidation.emailError(email)
+                    passwordError = AuthValidation.passwordError(password)
+                    if (emailError == null && passwordError == null) {
+                        authViewModel.login(email.trim(), password)
                     }
-                    authViewModel.login(email, password)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -242,7 +260,10 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 TextButton(
-                    onClick = onRegisterClick,
+                    onClick = {
+                        authViewModel.clearError()
+                        onRegisterClick()
+                    },
                     enabled = authState !is AuthState.Loading
                 ) {
                     Text(

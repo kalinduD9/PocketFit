@@ -11,14 +11,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SessionDao {
-    @Query("SELECT * FROM sessions ORDER BY startTimeMillis DESC")
-    fun getAllSessions(): Flow<List<ActivitySession>>
+    @Query("SELECT * FROM sessions WHERE userId = :userId ORDER BY startTimeMillis DESC")
+    fun getAllSessions(userId: String): Flow<List<ActivitySession>>
 
     @Query(
         "SELECT * FROM sessions " +
-            "WHERE status = 'ACTIVE' ORDER BY startTimeMillis DESC LIMIT 1"
+            "WHERE userId = :userId AND status = 'ACTIVE' " +
+            "ORDER BY startTimeMillis DESC LIMIT 1"
     )
-    fun getActiveSession(): Flow<ActivitySession?>
+    fun getActiveSession(userId: String): Flow<ActivitySession?>
+
+    @Query("UPDATE sessions SET userId = :userId WHERE userId = ''")
+    suspend fun assignUnownedSessions(userId: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSession(session: ActivitySession): Long

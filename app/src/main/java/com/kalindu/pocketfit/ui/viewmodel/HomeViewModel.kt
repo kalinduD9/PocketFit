@@ -48,6 +48,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _goalsMessage.value = null
     }
 
+    fun reloadDailyGoals() {
+        _dailyGoals.value = goalsRepository.load()
+        _goalsMessage.value = null
+    }
+
     fun setWeatherLoading() {
         _weatherState.value = WeatherUiState.Loading
     }

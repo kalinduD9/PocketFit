@@ -48,6 +48,26 @@ class SessionCalculationsTest {
     }
 
     @Test
+    fun recordedStepsAreMonotonicAndStopAtStepGoal() {
+        assertEquals(
+            104,
+            SessionCalculations.recordedSteps(
+                sensorSteps = 100,
+                currentSteps = 104,
+                stepGoal = null
+            )
+        )
+        assertEquals(
+            100,
+            SessionCalculations.recordedSteps(
+                sensorSteps = 106,
+                currentSteps = 98,
+                stepGoal = 100
+            )
+        )
+    }
+
+    @Test
     fun reachingEitherGoalReturnsCompletionReason() {
         assertEquals(
             SessionCompletionReason.STEP_GOAL,

@@ -280,6 +280,8 @@ fun AppNavigation() {
                 LoginScreen(
                     authViewModel = authViewModel,
                     onLoginSuccess = {
+                        homeViewModel.reloadDailyGoals()
+                        sessionViewModel.refreshUser()
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
@@ -295,6 +297,8 @@ fun AppNavigation() {
                 RegisterScreen(
                     authViewModel = authViewModel,
                     onRegisterSuccess = {
+                        homeViewModel.reloadDailyGoals()
+                        sessionViewModel.refreshUser()
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
@@ -355,6 +359,8 @@ fun AppNavigation() {
                     sessionViewModel = sessionViewModel,
                     onLogoutClick = {
                         authViewModel.logout()
+                        homeViewModel.reloadDailyGoals()
+                        sessionViewModel.refreshUser()
                         navController.navigate(Screen.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }

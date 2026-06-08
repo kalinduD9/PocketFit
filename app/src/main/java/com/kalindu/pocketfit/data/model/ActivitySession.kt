@@ -1,5 +1,6 @@
 package com.kalindu.pocketfit.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -19,6 +20,8 @@ object SessionCompletionReason {
 data class ActivitySession(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
+    @ColumnInfo(defaultValue = "''")
+    val userId: String = "",
     val name: String,
     val plannedDurationMinutes: Int,
     val stepGoal: Int? = null,

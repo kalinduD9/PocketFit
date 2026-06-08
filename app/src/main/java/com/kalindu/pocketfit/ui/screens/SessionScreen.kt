@@ -83,7 +83,7 @@ fun SessionScreen(
     val totalSteps = sessions.sumOf { it.steps }
     val totalCalories = sessions.sumOf {
         if (it.status == SessionStatus.ACTIVE) {
-            SessionCalculations.caloriesForSteps(it.steps)
+            SessionCalculations.caloriesForSteps(it.steps, it.weightUsedKg)
         } else {
             it.calories
         }

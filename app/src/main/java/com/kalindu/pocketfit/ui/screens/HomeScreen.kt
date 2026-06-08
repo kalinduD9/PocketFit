@@ -171,7 +171,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                FilledTonalButton(onClick = { showGoalsDialog = true }) {
+                Button(onClick = { showGoalsDialog = true }) {
                     Text("Edit")
                 }
             }

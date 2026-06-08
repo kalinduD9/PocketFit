@@ -54,6 +54,15 @@ object SessionCalculations {
             .coerceAtLeast(0)
     }
 
+    fun recordedSteps(
+        sensorSteps: Int,
+        currentSteps: Int,
+        stepGoal: Int?
+    ): Int {
+        val monotonicSteps = maxOf(sensorSteps, currentSteps, 0)
+        return stepGoal?.let(monotonicSteps::coerceAtMost) ?: monotonicSteps
+    }
+
     fun liveMetrics(session: ActivitySession, nowMillis: Long): SessionMetrics {
         val plannedSeconds = session.plannedDurationMinutes * 60L
         val elapsedSeconds = ((nowMillis - session.startTimeMillis) / 1_000L)

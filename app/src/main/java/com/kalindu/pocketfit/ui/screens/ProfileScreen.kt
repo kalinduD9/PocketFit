@@ -361,7 +361,7 @@ fun ProfileScreen(
                                 Text("Cancel")
                             }
                         }
-                        FilledTonalButton(
+                        Button(
                             onClick = {
                                 if (isEditingName) {
                                     authViewModel.updateName(editedName)
@@ -452,7 +452,7 @@ fun ProfileScreen(
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
-                    FilledTonalButton(
+                    Button(
                         onClick = { authViewModel.resetPassword(email) },
                         enabled = authState !is AuthState.Loading && email.isNotBlank()
                     ) {
@@ -508,7 +508,7 @@ fun ProfileScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    FilledTonalButton(
+                    Button(
                         onClick = {
                             if (isEditing) {
                                 if (profileViewModel.saveDetails(weight, height, age)) {

@@ -5,8 +5,14 @@ import com.kalindu.pocketfit.data.model.ActivitySession
 import kotlinx.coroutines.flow.Flow
 
 class SessionRepository(private val sessionDao: SessionDao) {
-    val allSessions: Flow<List<ActivitySession>> = sessionDao.getAllSessions()
-    val activeSession: Flow<ActivitySession?> = sessionDao.getActiveSession()
+    fun allSessions(userId: String): Flow<List<ActivitySession>> =
+        sessionDao.getAllSessions(userId)
+
+    fun activeSession(userId: String): Flow<ActivitySession?> =
+        sessionDao.getActiveSession(userId)
+
+    suspend fun assignUnownedSessions(userId: String) =
+        sessionDao.assignUnownedSessions(userId)
 
     suspend fun insert(session: ActivitySession): Long =
         sessionDao.insertSession(session)
